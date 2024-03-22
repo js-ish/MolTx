@@ -30,17 +30,17 @@ class AbsPosEncoderDecoder(nn.Module):
 
         return self.embedding_dropout(src), self.embedding_dropout(tgt)
 
-    def forward(self, src: torch.Tensor, tgt: torch.Tensor, **kwargs: typing.Any) -> torch.Tensor:
+    def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
         src, tgt = self._forward_embedding(src, tgt)
-        return self.transformer(src, tgt, tgt_is_causal=True, **kwargs)
+        return self.transformer(src, tgt, tgt_is_causal=True)
 
-    def forward_feature(self, src: torch.Tensor, tgt: torch.Tensor, **kwargs: typing.Any) -> torch.Tensor:
-        out = self.forward(src, tgt, **kwargs)
+    def forward_feature(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
+        out = self.forward(src, tgt)
         indices = (tgt > 0).sum(dim=-1, keepdim=True) - 1
         indices = indices.unsqueeze(-1).repeat(*
                                                [1 for _ in range(tgt.dim())], out.shape[-1])
         return torch.gather(input=out, dim=-2, index=indices).squeeze()
 
-    def forward_generation(self, src: torch.Tensor, tgt: torch.Tensor, **kwargs: typing.Any) -> torch.Tensor:
-        out = self.forward(src, tgt, **kwargs)
+    def forward_generation(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
+        out = self.forward(src, tgt)
         return self.token_output(out)
