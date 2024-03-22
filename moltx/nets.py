@@ -44,3 +44,29 @@ class AbsPosEncoderDecoder(nn.Module):
     def forward_generation(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
         out = self.forward(src, tgt)
         return self.token_output(out)
+
+
+class AbsPosEncoderCausal(nn.Module):
+    def __init__(self, token_size: int, max_len: int = 200, d_model: int = 768, nhead: int = 8, num_layers: int = 12, dropout: float = 0.1, **kwargs: typing.Any) -> None:
+        super().__init__()
+        self.token_embedding = nn.Embedding(token_size, d_model, padding_idx=0)
+        self.pos_embedding = nn.Embedding(max_len, d_model)
+        self.embedding_dropout = nn.Dropout(dropout)
+        layer = nn.TransformerEncoderLayer(
+            d_model, nhead, dropout=dropout, batch_first=True, activation='gelu', norm_first=True)
+        self.transformer = nn.TransformerEncoder(layer, num_layers, norm=nn.LayerNorm(d_model))
+        self.token_output = nn.Linear(d_model, token_size, bias=False)
+
+    def load_ckpt(self, ckpt_files) -> None:
+        self.load_state_dict(torch.load(ckpt_files[0], map_location=torch.device('cpu')))
+
+    def _forward_embedding(self, x: torch.Tensor) -> torch.Tensor:
+        xlen = x.size(-1)
+        x = self.token_embedding(x)
+        position = torch.arange(0, xlen).to(x.device)
+        x += self.pos_embedding(position.unsqueeze(0))
+        return self.embedding_dropout(x)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self._forward_embedding(x)
+        return self.transformer(x, is_causal=True)
