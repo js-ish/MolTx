@@ -1,0 +1,46 @@
+import torch
+import torch.nn as nn
+import typing
+
+
+class AbsPosEncoderDecoder(nn.Module):
+    def __init__(self, token_size: int, max_len: int = 512, d_model: int = 768, nhead: int = 8, num_encoder_layers: int = 6, num_decoder_layers: int = 6, dropout: float = 0.1, **kwargs: typing.Any) -> None:
+        super().__init__()
+        self.token_embedding = nn.Embedding(token_size, d_model, padding_idx=0)
+        self.enc_pos_embedding = nn.Embedding(max_len, d_model)
+        self.dec_pos_embedding = nn.Embedding(max_len, d_model)
+        self.embedding_dropout = nn.Dropout(dropout)
+        self.transformer = nn.Transformer(
+            d_model, nhead, num_encoder_layers, num_decoder_layers, dropout=dropout, activation='gelu', batch_first=True, **kwargs)
+        self.token_output = nn.Linear(d_model, token_size, bias=False)
+
+    def load_ckpt(self, ckpt_files) -> None:
+        self.load_state_dict(torch.load(ckpt_files[0], map_location=torch.device('cpu')))
+
+    def _forward_embedding(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Tuple[torch.Tensor, torch.Tensor]:
+        srclen = src.size(-1)
+        src = self.token_embedding(src)
+        position = torch.arange(0, srclen).to(src.device)
+        src += self.enc_pos_embedding(position.unsqueeze(0))
+
+        tgtlen = tgt.size(-1)
+        tgt = self.token_embedding(tgt)
+        position = torch.arange(0, tgtlen).to(tgt.device)
+        tgt += self.dec_pos_embedding(position.unsqueeze(0))
+
+        return self.embedding_dropout(src), self.embedding_dropout(tgt)
+
+    def forward(self, src: torch.Tensor, tgt: torch.Tensor, **kwargs: typing.Any) -> torch.Tensor:
+        src, tgt = self._forward_embedding(src, tgt)
+        return self.transformer(src, tgt, tgt_is_causal=True, **kwargs)
+
+    def forward_feature(self, src: torch.Tensor, tgt: torch.Tensor, **kwargs: typing.Any) -> torch.Tensor:
+        out = self.forward(src, tgt, **kwargs)
+        indices = (tgt > 0).sum(dim=-1, keepdim=True) - 1
+        indices = indices.unsqueeze(-1).repeat(*
+                                               [1 for _ in range(tgt.dim())], out.shape[-1])
+        return torch.gather(input=out, dim=-2, index=indices).squeeze()
+
+    def forward_generation(self, src: torch.Tensor, tgt: torch.Tensor, **kwargs: typing.Any) -> torch.Tensor:
+        out = self.forward(src, tgt, **kwargs)
+        return self.token_output(out)
