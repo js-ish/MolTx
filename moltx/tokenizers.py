@@ -177,17 +177,17 @@ class MoltxTokenizer:
         return self._seq_len
 
     @classmethod
-    def from_jsonfile(cls, molecule_type: str = 'smiles', *args, **kwargs) -> 'PmtTokenizer':
+    def from_jsonfile(cls, molecule_type: str = 'smiles', *args, **kwargs) -> 'MoltxTokenizer':
         kwargs['spe_codes'] = os.path.join(os.path.dirname(__file__), 'data', f'spe_{molecule_type}.txt')
         tkz = cls(*args, **kwargs, freeze=True)
         tkz.load(os.path.join(os.path.dirname(__file__), 'data', f'tks_{molecule_type}.json'))
         return tkz
 
-    def loads(self, tokens_json: str) -> 'PmtTokenizer':
+    def loads(self, tokens_json: str) -> 'MoltxTokenizer':
         tokens = json.loads(tokens_json)['tokens']
         return self._load_tokens(tokens)
 
-    def load(self, path: str) -> 'PmtTokenizer':
+    def load(self, path: str) -> 'MoltxTokenizer':
         with open(path, 'r') as f:
             return self.loads(f.read())
 
