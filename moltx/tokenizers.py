@@ -1,5 +1,4 @@
 import json
-import torch
 import typing
 import re
 import random
@@ -112,11 +111,12 @@ class NumericalTokenizer:
 
 
 class MoltxTokenizer:
-    def __init__(self, token_size: int = 512, seq_len: int = 256, freeze: bool = False, dropout: float = 1.000000001, spe_codes: typing.Optional[str] = None, spe_merges: int = -1, molecule_type : str = 'smiles') -> None:
+    REGEX = re.compile(r"<\w{3}>")
+
+    def __init__(self, token_size: int = 512, freeze: bool = False, dropout: float = 1.000000001, spe_codes: typing.Optional[str] = None, spe_merges: int = -1) -> None:
         self._tokens = []
         self._token_idx = {}
         self._token_size = token_size
-        self._seq_len = seq_len
         self._freeze = freeze
         self._update_tokens(self.reserved)
         spe_kwargs = {'dropout': dropout}
@@ -142,27 +142,13 @@ class MoltxTokenizer:
         self._update_tokens(tokens)
         self._freeze = freeze
 
-    def __call__(self, smiles: typing.Union[str, typing.List[int]], seqlen: int = 0,
-                 add_bos: bool = False, add_eos: bool = False, add_cls: bool = False,
-                 multi_input: bool = False, padding: bool = True) -> torch.Tensor:
-        if seqlen <= 0:
-            seqlen = self._seq_len
-        if isinstance(smiles, str):
-            smiles = self.encode(smiles, maxlen=seqlen)
-        smiles = smiles[:seqlen-1]
-        if add_bos:
-            smiles = [self._token_idx[self.bos]] + smiles
-        if add_eos:
-            smiles = smiles + [self._token_idx[self.eos]]
-        if add_cls:
-            smiles = [self._token_idx[self.cls]] + smiles
-        tokens_ = torch.zeros(seqlen, dtype=torch.int)
-        for i, token in enumerate(smiles):
-            tokens_[i] = token
-        if not padding:
-            last_char = min((tokens_ == self._token_idx[self.pad]).nonzero())
-            tokens_ = tokens_[:last_char]
-        return tokens_
+    def __call__(self, smiles: str, tokens_only: bool = False) -> typing.List[typing.Union[int, str]]:
+        tokens = self.encode(smiles)
+        self._update_tokens(tokens)
+        if tokens_only:
+            return tokens
+        unk = self._token_idx[self.unk]
+        return [self._token_idx.get(t, unk) for t in tokens]
 
     def __getitem__(self, item: typing.Union[int, str]) -> str:
         if isinstance(item, int):
@@ -171,10 +157,6 @@ class MoltxTokenizer:
 
     def __len__(self) -> int:
         return len(self._tokens)
-
-    @property
-    def seq_len(self) -> int:
-        return self._seq_len
 
     @classmethod
     def from_jsonfile(cls, molecule_type: str = 'smiles', *args, **kwargs) -> 'MoltxTokenizer':
@@ -200,25 +182,24 @@ class MoltxTokenizer:
         with open(path, 'w') as f:
             f.write(self.dumps())
 
-    def encode(self, smiles: str, maxlen: typing.Optional[int] = None) -> typing.List[int]:
-        tokens = self._smi_tkz(smiles)
-        if maxlen is not None and len(tokens) >= maxlen:
-            return []
-        return [self._token_idx.get(t, self._token_idx[self.unk]) for t in tokens]
+    def encode(self, smiles: str) -> typing.List[str]:
+        tokens = []
+        m = self.REGEX.search(smiles)
+        pos = 0
+        while m is not None:
+            start, end = m.span()
+            if start > pos:
+                tokens.extend(self._smi_tkz(smiles[pos:start]))
+            tokens.append(m[0])
+            pos = end
+            m = self.REGEX.search(smiles, pos=pos)
+        if len(smiles) > pos:
+            tokens.extend(self._smi_tkz(smiles[pos:]))
+        return tokens
 
-    def decode(self, tokens: typing.List[int]) -> str:
-        eos = self._token_idx[self.eos]
-        pad = self._token_idx[self.pad]
-        bos = self._token_idx[self.bos]
-        smi = []
-        start_idx = 1 if tokens[0] == bos else 0
-        token_len = len(self._tokens)
-        for i in tokens[start_idx:]:
-            if i == eos or i == pad:
-                break
-            if i < token_len:
-                smi.append(self._tokens[i])
-        return ''.join(smi)
+    def decode(self, token_idxs: typing.List[int]) -> str:
+        tokens = [self._tokens[idx] for idx in token_idxs]
+        return ''.join(tokens)
 
     @property
     def pad(self):
