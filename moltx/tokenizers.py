@@ -112,6 +112,13 @@ class NumericalTokenizer:
 
 class MoltxTokenizer:
     REGEX = re.compile(r"<\w{3}>")
+    PAD="<pad>"
+    UNK="<unk>"
+    BOS="<bos>"
+    EOS="<eos>"
+    SEP="<sep>"
+    CLS="<cls>"
+    RESERVED = (PAD, UNK, BOS, EOS, SEP, CLS)
 
     def __init__(self, token_size: int = 512, freeze: bool = False, dropout: float = 1.000000001, spe_codes: typing.Optional[str] = None, spe_merges: int = -1) -> None:
         self._tokens = []
@@ -147,13 +154,13 @@ class MoltxTokenizer:
         self._update_tokens(tokens)
         if tokens_only:
             return tokens
-        unk = self._token_idx[self.unk]
+        unk = self._token_idx[self.UNK]
         return [self._token_idx.get(t, unk) for t in tokens]
 
     def __getitem__(self, item: typing.Union[int, str]) -> str:
         if isinstance(item, int):
             return self._tokens[item]
-        return self._token_idx.get(item, self._token_idx[self.unk])
+        return self._token_idx.get(item, self._token_idx[self.UNK])
 
     def __len__(self) -> int:
         return len(self._tokens)
@@ -200,31 +207,3 @@ class MoltxTokenizer:
     def decode(self, token_idxs: typing.List[int]) -> str:
         tokens = [self._tokens[idx] for idx in token_idxs]
         return ''.join(tokens)
-
-    @property
-    def pad(self):
-        return '<pad>'
-
-    @property
-    def unk(self):
-        return '<unk>'
-
-    @property
-    def bos(self):
-        return '<bos>'
-
-    @property
-    def eos(self):
-        return '<eos>'
-
-    @property
-    def sep(self):
-        return '<sep>'
-
-    @property
-    def cls(self):
-        return '<cls>'
-
-    @property
-    def reserved(self):
-        return (self.pad, self.unk, self.bos, self.eos, self.sep, self.cls)
