@@ -125,7 +125,7 @@ class MoltxTokenizer:
         self._token_idx = {}
         self._token_size = token_size
         self._freeze = freeze
-        self._update_tokens(self.reserved)
+        self._update_tokens(self.RESERVED)
         spe_kwargs = {'dropout': dropout}
         if spe_codes is not None:
             spe_kwargs['codes_path'] = spe_codes
