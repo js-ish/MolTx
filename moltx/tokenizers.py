@@ -112,12 +112,12 @@ class NumericalTokenizer:
 
 class MoltxTokenizer:
     REGEX = re.compile(r"<\w{3}>")
-    PAD="<pad>"
-    UNK="<unk>"
-    BOS="<bos>"
-    EOS="<eos>"
-    SEP="<sep>"
-    CLS="<cls>"
+    PAD = "<pad>"
+    UNK = "<unk>"
+    BOS = "<bos>"
+    EOS = "<eos>"
+    SEP = "<sep>"
+    CLS = "<cls>"
     RESERVED = (PAD, UNK, BOS, EOS, SEP, CLS)
 
     def __init__(self, token_size: int = 512, freeze: bool = False, dropout: float = 1.000000001, spe_codes: typing.Optional[str] = None, spe_merges: int = -1) -> None:
@@ -167,9 +167,11 @@ class MoltxTokenizer:
 
     @classmethod
     def from_jsonfile(cls, molecule_type: str = 'smiles', *args, **kwargs) -> 'MoltxTokenizer':
-        kwargs['spe_codes'] = os.path.join(os.path.dirname(__file__), 'data', f'spe_{molecule_type}.txt')
+        kwargs['spe_codes'] = os.path.join(os.path.dirname(
+            __file__), 'data', f'spe_{molecule_type}.txt')
         tkz = cls(*args, **kwargs, freeze=True)
-        tkz.load(os.path.join(os.path.dirname(__file__), 'data', f'tks_{molecule_type}.json'))
+        tkz.load(os.path.join(os.path.dirname(__file__),
+                 'data', f'tks_{molecule_type}.json'))
         return tkz
 
     def loads(self, tokens_json: str) -> 'MoltxTokenizer':
