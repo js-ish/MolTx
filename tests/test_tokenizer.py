@@ -59,6 +59,8 @@ def test_spe_safe_tkz(datadir):
 def test_moltx_tkz():
     tok = tkz.MoltxTokenizer(token_size=128)
 
+    tokens = tok('<pad>', tokens_only=True)
+    assert tokens == ['<pad>']
     tokens = tok('BrCl<pad>', tokens_only=True)
     assert tokens == ['Br', 'Cl', '<pad>']
     tokens = tok('BrCl<pad>')
