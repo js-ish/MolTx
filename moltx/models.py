@@ -4,13 +4,16 @@ import torch.nn as nn
 from moltx import nets
 
 
+AdaMRConfig = nets.AbsPosEncoderDecoderConfig
+
+
 class AdaMR(nets.AbsPosEncoderDecoder):
-    pass
+    def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
+        return super().forward_generation(src, tgt)
 
 
-class AdaMRClassifier(nets.AbsPosEncoderDecoder):
-    def __init__(self, num_classes: int, *args: typing.Any, **kwargs: typing.Any) -> None:
-        conf = nets.AbsPosEncoderDecoderConfig(*args, **kwargs)
+class AdaMRClassifier(AdaMR):
+    def __init__(self, num_classes: int, conf: AdaMRConfig) -> None:
         super().__init__(conf=conf)
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
@@ -30,9 +33,8 @@ class AdaMRClassifier(nets.AbsPosEncoderDecoder):
         return self.fc(feats)
 
 
-class AdaMRRegression(nets.AbsPosEncoderDecoder):
-    def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None:
-        conf = nets.AbsPosEncoderDecoderConfig(*args, **kwargs)
+class AdaMRRegression(AdaMR):
+    def __init__(self, conf: AdaMRConfig) -> None:
         super().__init__(conf=conf)
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
@@ -52,13 +54,13 @@ class AdaMRRegression(nets.AbsPosEncoderDecoder):
         return self.fc(feats)
 
 
-class AdaMRDistGeneration(nets.AbsPosEncoderDecoder):
+class AdaMRDistGeneration(AdaMR):
     def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
         return super().forward_generation(src, tgt)
 
 
-class AdaMRGoalGeneration(nets.AbsPosEncoderDecoder):
-    def forward(self, goal: float, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
+class AdaMRGoalGeneration(AdaMR):
+    def forward(self, goal: torch.Tensor, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
         is_batched = src.dim() == 2
         src = self.embedding(src)
         tgt = self.embedding(tgt)
