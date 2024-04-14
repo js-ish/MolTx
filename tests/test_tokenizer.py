@@ -1,10 +1,5 @@
-import pytest
 import os.path
 from moltx import tokenizers as tkz
-
-@pytest.fixture
-def datadir():
-    return os.path.join(os.path.dirname(__file__), '../moltx/data')
 
 
 def test_smi_tkz():
