@@ -119,6 +119,7 @@ class MoltxTokenizer:
     SEP = "<sep>"
     CLS = "<cls>"
     RESERVED = (PAD, UNK, BOS, EOS, SEP, CLS)
+    DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
     def __init__(self, token_size: int = 512, freeze: bool = False, dropout: float = 1.000000001, spe_codes: typing.Optional[str] = None, spe_merges: int = -1) -> None:
         self._tokens = []
@@ -166,12 +167,12 @@ class MoltxTokenizer:
         return len(self._tokens)
 
     @classmethod
-    def from_jsonfile(cls, molecule_type: str = 'smiles', *args, **kwargs) -> 'MoltxTokenizer':
-        kwargs['spe_codes'] = os.path.join(os.path.dirname(
-            __file__), 'data', f'spe_{molecule_type}.txt')
+    def from_jsonfile(cls, datadir: typing.Optional[str] = None, fmt: str = 'smiles', *args, **kwargs) -> 'MoltxTokenizer':
+        if datadir is None:
+            datadir = cls.DATADIR
+        kwargs['spe_codes'] = os.path.join(datadir, f'spe_{fmt}.txt')
         tkz = cls(*args, **kwargs, freeze=True)
-        tkz.load(os.path.join(os.path.dirname(__file__),
-                 'data', f'tks_{molecule_type}.json'))
+        tkz.load(datadir, f'tks_{fmt}.json')
         return tkz
 
     def loads(self, tokens_json: str) -> 'MoltxTokenizer':

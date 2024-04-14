@@ -1,10 +1,5 @@
-import pytest
 import os.path
 from moltx import tokenizers as tkz
-
-@pytest.fixture
-def datadir():
-    return os.path.join(os.path.dirname(__file__), '../moltx/data')
 
 
 def test_smi_tkz():
@@ -50,7 +45,6 @@ def test_spe_safe_tkz(datadir):
     smi = "N18CC[C@H]CC1.O=C6C#CC8.N67.c17ccc2ncnc4c2c1.N45.c15cccc(Br)c1"
     tok = tkz.SmilesTokenizer(codes_path=os.path.join(datadir, 'spe_safe.txt'))
     tokens = tok(smi)
-    print(tokens)
     assert tokens == ['N18', 'CC[C@H]', 'CC1', '.O=C', '6C', '#', 'CC8',
                       '.N67', '.c17', 'ccc2', 'nc', 'nc4', 'c2c1', '.N45', '.c15', 'cccc(Br)c1']
     assert tok('C') == ['C']

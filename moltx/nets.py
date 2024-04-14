@@ -8,7 +8,7 @@ class AbsPosEmbedding(nn.Module):
     def __init__(self, token_size: int, max_len: int, d_model: int, dropout: float = 0.1) -> None:
         super().__init__()
         self.token_embedding = nn.Embedding(token_size, d_model, padding_idx=0)
-        self.pos_embedding = nn.Embedding(max_len, d_model, padding_idx=0)
+        self.pos_embedding = nn.Embedding(max_len + 1, d_model, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -48,9 +48,11 @@ class AbsPosEncoderDecoder(nn.Module):
             ckpt_files[0], map_location=torch.device('cpu')))
 
     def forward_(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
+        mask = nn.Transformer.generate_square_subsequent_mask(
+            tgt.size(-1), device=tgt.device)
         src = self.embedding(src)
         tgt = self.embedding(tgt)
-        return self.transformer(src, tgt, tgt_is_causal=True)
+        return self.transformer(src, tgt, tgt_mask=mask, tgt_is_causal=True)
 
     def forward_feature(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
         out = self.forward_(src, tgt)
@@ -81,7 +83,7 @@ class AbsPosEncoderCausal(nn.Module):
         self.embedding = AbsPosEmbedding(
             conf.token_size, conf.max_len, conf.d_model, conf.dropout)
         layer = nn.TransformerEncoderLayer(
-            conf.d_model, conf.nhead, dropout=conf.dropout, batch_first=True, activation='gelu', norm_first=True)
+            conf.d_model, conf.nhead, dropout=conf.dropout, batch_first=True, activation='gelu')
         self.transformer = nn.TransformerEncoder(
             layer, conf.num_layers, norm=nn.LayerNorm(conf.d_model))
         self.token_output = nn.Linear(
@@ -92,8 +94,10 @@ class AbsPosEncoderCausal(nn.Module):
             ckpt_files[0], map_location=torch.device('cpu')))
 
     def forward_(self, x: torch.Tensor) -> torch.Tensor:
+        mask = nn.Transformer.generate_square_subsequent_mask(
+            x.size(-1), device=x.device)
         x = self.embedding(x)
-        return self.transformer(x, is_causal=True)
+        return self.transformer(x, mask=mask, is_causal=True)
 
     def forward_feature(self, x: torch.Tensor) -> torch.Tensor:
         out = self.forward_(x)
