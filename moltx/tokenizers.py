@@ -167,12 +167,12 @@ class MoltxTokenizer:
         return len(self._tokens)
 
     @classmethod
-    def from_jsonfile(cls, datadir: typing.Optional[str] = None, fmt: str = 'smiles', *args, **kwargs) -> 'MoltxTokenizer':
+    def from_jsonfile(cls, datadir: typing.Optional[str] = None, fmt: str = 'smiles', **kwargs) -> 'MoltxTokenizer':
         if datadir is None:
             datadir = cls.DATADIR
         kwargs['spe_codes'] = os.path.join(datadir, f'spe_{fmt}.txt')
-        tkz = cls(*args, **kwargs, freeze=True)
-        tkz.load(datadir, f'tks_{fmt}.json')
+        tkz = cls(**kwargs, freeze=True)
+        tkz.load(os.path.join(datadir, f'tks_{fmt}.json'))
         return tkz
 
     def loads(self, tokens_json: str) -> 'MoltxTokenizer':
