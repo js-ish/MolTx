@@ -9,20 +9,20 @@ on:
       - main
 
 jobs:
-  # lint:
-  #   name: lint
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
-  #     - uses: actions/setup-python@v4
-  #       with:
-  #         python-version: '3.10'
-  #         cache: 'pip'
-  #     - run: pip install -r test-requirements.txt -U
-  #     - name: Run python code lint
-  #       run: flake8 moltx
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      - run: pip install -U flake8
+      - name: Run python code lint
+        run: flake8 moltx
 
   tests:
     name: "Python ${{ matrix.py-version }} unit-tests"

@@ -138,10 +138,10 @@ class MoltxTokenizer:
             return
         for token in tokens:
             if token not in self._token_idx:
-                l = len(self._tokens)
-                if l >= self._token_size:
+                t = len(self._tokens)
+                if t >= self._token_size:
                     return
-                self._token_idx[token] = l
+                self._token_idx[token] = t
                 self._tokens.append(token)
 
     def _load_tokens(self, tokens: typing.Sequence[str]) -> None:

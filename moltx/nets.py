@@ -14,7 +14,7 @@ class AbsPosEmbedding(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         xlen = x.size(-1)
         mask = (x > 0).long()
-        position = torch.arange(1, xlen+1).to(x.device)
+        position = torch.arange(1, xlen + 1).to(x.device)
         position = position * mask
         x = self.token_embedding(x)
         x += self.pos_embedding(position)
