@@ -1,0 +1,9 @@
+[run]
+omit =
+	*/_version.py
+relative_files = True
+
+[report]
+exclude_lines =
+	^VERSION =
+	raise NotImplementedError
