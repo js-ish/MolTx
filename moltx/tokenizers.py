@@ -150,27 +150,23 @@ class MoltxTokenizer:
         self._update_tokens(tokens)
         self._freeze = freeze
 
-    def __call__(self, smiles: str, tokens_only: bool = False) -> typing.Sequence[typing.Union[int, str]]:
-        tokens = self.encode(smiles)
-        self._update_tokens(tokens)
-        if tokens_only:
-            return tokens
-        unk = self._token_idx[self.UNK]
-        return [self._token_idx.get(t, unk) for t in tokens]
-
     def __getitem__(self, item: typing.Union[int, str]) -> str:
         if isinstance(item, int):
-            return self._tokens[item]
+            try:
+                return self._tokens[item]
+            except IndexError:
+                return self.UNK
         return self._token_idx.get(item, self._token_idx[self.UNK])
 
     def __len__(self) -> int:
         return len(self._tokens)
 
     @classmethod
-    def from_jsonfile(cls, datadir: typing.Optional[str] = None, fmt: str = 'smiles', **kwargs) -> 'MoltxTokenizer':
+    def from_jsonfile(cls, datadir: typing.Optional[str] = None, fmt: str = 'smiles', spe_codes: bool = False, **kwargs) -> 'MoltxTokenizer':
         if datadir is None:
             datadir = cls.DATADIR
-        kwargs['spe_codes'] = os.path.join(datadir, f'spe_{fmt}.txt')
+        if spe_codes:
+            kwargs['spe_codes'] = os.path.join(datadir, f'spe_{fmt}.txt')
         tkz = cls(**kwargs, freeze=True)
         tkz.load(os.path.join(datadir, f'tks_{fmt}.json'))
         return tkz
@@ -192,7 +188,7 @@ class MoltxTokenizer:
         with open(path, 'w') as f:
             f.write(self.dumps())
 
-    def encode(self, smiles: str) -> typing.Sequence[str]:
+    def smi2tokens(self, smiles: str) -> typing.Sequence[str]:
         tokens = []
         m = self.REGEX.search(smiles)
         pos = 0
@@ -208,5 +204,13 @@ class MoltxTokenizer:
         return tokens
 
     def decode(self, token_idxs: typing.Sequence[int]) -> str:
-        tokens = [self._tokens[idx] for idx in token_idxs]
+        tokens = [self[idx] for idx in token_idxs]
         return ''.join(tokens)
+
+    def encode(self, smiles: str) -> typing.Sequence[int]:
+        tokens = self.smi2tokens(smiles)
+        self._update_tokens(tokens)
+        return [self[t] for t in tokens]
+
+    def __call__(self, smiles: str) -> typing.Sequence[int]:
+        return self.encode(smiles)

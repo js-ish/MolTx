@@ -53,16 +53,20 @@ def test_spe_safe_tkz(datadir):
 def test_moltx_tkz():
     tok = tkz.MoltxTokenizer(token_size=128)
 
-    tokens = tok('<pad>', tokens_only=True)
+    tokens = tok.smi2tokens('<pad>')
     assert tokens == ['<pad>']
-    tokens = tok('BrCl<pad>', tokens_only=True)
-    assert tokens == ['Br', 'Cl', '<pad>']
+
+    tokens = tok.smi2tokens('c1ccccc1<sep><cls>c1ccccc1')
+    assert tokens == ['c', '1', 'c', 'c', 'c', 'c', 'c', '1',
+                      '<sep>', '<cls>', 'c', '1', 'c', 'c', 'c', 'c', 'c', '1']
+
     tokens = tok('BrCl<pad>')
     assert tokens[2] == 0
+    assert tok.decode(tokens) == 'BrCl<pad>'
 
-    dumps = tok.dumps()
-    tok2 = tkz.MoltxTokenizer(token_size=128)
-    tok2.loads(dumps)
+    datadir = '/tmp'
+    tok.dump(os.path.join(datadir, 'tks_smiles.json'))
+    tok2 = tkz.MoltxTokenizer.from_jsonfile(datadir, token_size=128)
     assert tok._tokens == tok2._tokens
     assert tok._token_idx == tok2._token_idx
 
@@ -72,9 +76,4 @@ def test_moltx_tkz():
     tokens = stok('BrCl')
     assert tokens[0] == 1
 
-    tk = tkz.MoltxTokenizer(token_size=128)
-    smi = 'c1ccccc1<sep><cls>c1ccccc1'
-    tokens = tk(smi, tokens_only=True)
-    assert tokens == ['c', '1', 'c', 'c', 'c', 'c', 'c', '1',
-                      '<sep>', '<cls>', 'c', '1', 'c', 'c', 'c', 'c', 'c', '1']
-    assert len(tk) == 8
+    #TODO add test for from_jsonfile
