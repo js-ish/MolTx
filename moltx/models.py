@@ -62,11 +62,13 @@ class AdaMRDistGeneration(AdaMR):
 class AdaMRGoalGeneration(AdaMR):
     def forward(self, goal: torch.Tensor, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
         is_batched = src.dim() == 2
+        mask = nn.Transformer.generate_square_subsequent_mask(
+            tgt.size(-1), device=tgt.device)
         src = self.embedding(src)
         tgt = self.embedding(tgt)
         if is_batched:
             src[:, 0] = src[:, 0] * goal
         else:
             src[0] = src[0] * goal
-        out = self.transformer(src, tgt, tgt_is_causal=True)
+        out = self.transformer(src, tgt, tgt_mask=mask, tgt_is_causal=True)
         return self.token_output(out)

@@ -5,13 +5,13 @@ from moltx import tokenizers
 
 
 class Base:
-    def __init__(self, device: torch.device, tokenizer: tokenizers.MoltxTokenizer, model: nn.Module) -> None:
-        self.device = device
+    def __init__(self, tokenizer: tokenizers.MoltxTokenizer, model: nn.Module, device: torch.device = torch.device('cpu')) -> None:
         self.tokenizer = tokenizer
         model = model.to(device)
         model.eval()
         model.requires_grad_(False)
         self.model = model
+        self.device = device
 
     def _tokenize(self, smiles: str) -> torch.Tensor:
         tks = self.tokenizer(smiles)
@@ -71,14 +71,14 @@ class Base:
         meet_end = torch.zeros_like(log_probs, dtype=torch.bool)
         for _ in range(maxlen - tgt.size(-1)):
             next_log_probs = self.model(
-                tgt=tgt, **kwds)[-1].log_softmax(-1)  # [beam, token_size]
+                tgt=tgt, **kwds)[:, -1].log_softmax(-1)  # [beam, token_size]
             # [beam * tokensize, 1]
             next_log_probs = (next_log_probs + log_probs).view(-1, 1)
             log_probs, idx = next_log_probs.topk(
                 k=beam_width, dim=0)  # [beam, 1]
             tgt_idx = idx.div(token_size, rounding_mode="floor")  # [beam, 1]
             next_tokens = idx - tgt_idx * token_size  # [beam, 1]
-            meet_end |= next_tokens.eq(self.eos)
+            meet_end |= next_tokens.eq(eos)
             tgt = tgt[tgt_idx.squeeze()]
             tgt = torch.concat((tgt, next_tokens), dim=-1)
             if meet_end.all():
