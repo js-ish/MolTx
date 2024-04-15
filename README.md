@@ -1,3 +1,4 @@
-# AdaMR
+# MolTx
 
-Comming soon!
+[![Coverage Status](https://coveralls.io/repos/github/js-ish/MolTx/badge.svg?branch=main)](https://coveralls.io/github/js-ish/MolTx?branch=main)
+[![](https://img.shields.io/badge/pyversion-3.7%7C3.8%7C3.9%7C3.10-blue.svg)](https://github.com/js-ish/MolTx)
