@@ -8,7 +8,7 @@ import os
 class SmilesAtomwiseTokenizer:
     REGEX = r"(\[[^\]]+]|Br?|Cl?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
 
-    def __init__(self, exclusive: typing.Optional[typing.List[str]] = None) -> None:
+    def __init__(self, exclusive: typing.Optional[typing.Sequence[str]] = None) -> None:
         """
         Tokenize a SMILES molecule at atom-level:
             (1) 'Br' and 'Cl' are two-character tokens
@@ -20,7 +20,7 @@ class SmilesAtomwiseTokenizer:
         self._regex = re.compile(self.REGEX)
         self._exclusive = exclusive
 
-    def __call__(self, smiles: str) -> typing.List[str]:
+    def __call__(self, smiles: str) -> typing.Sequence[str]:
         tokens = self._regex.findall(smiles)
         if self._exclusive:
             for i, token in enumerate(tokens):
@@ -43,7 +43,7 @@ class SmilesTokenizer:
     If `dropout` is set to 0, the segmentation is equivalent to the standard BPE; if `dropout` is set to 1, the segmentation splits words into distinct characters.
     """
 
-    def __init__(self, codes_path: typing.Optional[str] = None, dropout: float = 0.0, merges: int = -1, exclusive_tokens: typing.Optional[typing.List[str]] = None) -> None:
+    def __init__(self, codes_path: typing.Optional[str] = None, dropout: float = 0.0, merges: int = -1, exclusive_tokens: typing.Optional[typing.Sequence[str]] = None) -> None:
         self.smi_tkz = SmilesAtomwiseTokenizer(exclusive_tokens)
         self.dropout = dropout
         self.bpe_codes = {}
@@ -57,7 +57,7 @@ class SmilesTokenizer:
             self.bpe_codes = dict([(code, i)
                                    for (i, code) in enumerate(bpe_codes)])
 
-    def __call__(self, smiles: str) -> typing.List[str]:
+    def __call__(self, smiles: str) -> typing.Sequence[str]:
         if len(smiles) == 1:
             return [smiles]
         tokens = self.smi_tkz(smiles)
@@ -92,7 +92,7 @@ class NumericalTokenizer:
     def __init__(self):
         self._regex = re.compile(self.REGEX)
 
-    def __call__(self, number: str) -> typing.List[str]:
+    def __call__(self, number: str) -> typing.Sequence[str]:
         digits = self._regex.findall(number)
         try:
             dot = digits.index('.')
@@ -133,7 +133,7 @@ class MoltxTokenizer:
             spe_kwargs['merges'] = spe_merges
         self._smi_tkz = SmilesTokenizer(**spe_kwargs)
 
-    def _update_tokens(self, tokens: typing.List[str]) -> None:
+    def _update_tokens(self, tokens: typing.Sequence[str]) -> None:
         if self._freeze:
             return
         for token in tokens:
@@ -144,7 +144,7 @@ class MoltxTokenizer:
                 self._token_idx[token] = l
                 self._tokens.append(token)
 
-    def _load_tokens(self, tokens: typing.List[str]) -> None:
+    def _load_tokens(self, tokens: typing.Sequence[str]) -> None:
         freeze = self._freeze
         self._freeze = False
         self._update_tokens(tokens)
@@ -188,7 +188,7 @@ class MoltxTokenizer:
         with open(path, 'w') as f:
             f.write(self.dumps())
 
-    def smi2tokens(self, smiles: str) -> typing.List[str]:
+    def smi2tokens(self, smiles: str) -> typing.Sequence[str]:
         tokens = []
         m = self.REGEX.search(smiles)
         pos = 0
@@ -203,14 +203,14 @@ class MoltxTokenizer:
             tokens.extend(self._smi_tkz(smiles[pos:]))
         return tokens
 
-    def decode(self, token_idxs: typing.List[int]) -> str:
+    def decode(self, token_idxs: typing.Sequence[int]) -> str:
         tokens = [self[idx] for idx in token_idxs]
         return ''.join(tokens)
 
-    def encode(self, smiles: str) -> typing.List[int]:
+    def encode(self, smiles: str) -> typing.Sequence[int]:
         tokens = self.smi2tokens(smiles)
         self._update_tokens(tokens)
         return [self[t] for t in tokens]
 
-    def __call__(self, smiles: str) -> typing.List[int]:
+    def __call__(self, smiles: str) -> typing.Sequence[int]:
         return self.encode(smiles)

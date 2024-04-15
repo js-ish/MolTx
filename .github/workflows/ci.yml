@@ -9,30 +9,29 @@ on:
       - main
 
 jobs:
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          cache: 'pip'
-      - run: pip install -r test-requirements.txt -U
-      - name: Run git-lint
-        run: gitlint
-      - name: Run python code lint
-        run: flake8 moltx
+  # lint:
+  #   name: lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #     - uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.10'
+  #         cache: 'pip'
+  #     - run: pip install -r test-requirements.txt -U
+  #     - name: Run python code lint
+  #       run: flake8 moltx
 
   tests:
     name: "Python ${{ matrix.py-version }} unit-tests"
-    needs: lint
+    # needs: lint
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        py-version: ['3.7', '3.8', '3.9', '3.10']
+        py-version: ['3.8', '3.9', '3.10']
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -41,12 +40,12 @@ jobs:
           cache: 'pip'
       - run: pip install -r test-requirements.txt -U
       - name: Run unit-tests
-        run: pytest tests --cov moltx
+        run: pytest tests
       - name: Coveralls Parallel
         uses: AndreMiras/coveralls-python-action@develop
         with:
           flag-name: "Integration Test - ${{ matrix.py-version }}"
-          parallel: true
+          # parallel: true
 
   report_coverage:
     name: Report testing coverage

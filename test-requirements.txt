@@ -1,7 +1,6 @@
 -r requirements.txt
 pytest
-gitlint
+pytest-cov
 flake8
 coverage
 coveralls
-codeclimate-test-reporter
