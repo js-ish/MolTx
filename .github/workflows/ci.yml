@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r test-requirements.txt -U
+      - name: Run git-lint
+        run: gitlint
+      - name: Run python code lint
+        run: flake8 moltx
+
+  tests:
+    name: "Python ${{ matrix.py-version }} unit-tests"
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        py-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+          cache: 'pip'
+      - run: pip install -r test-requirements.txt -U
+      - name: Run unit-tests
+        run: pytest tests
