@@ -18,7 +18,7 @@ class Base:
         size = len(tks)
         return self._tokens2tensor(tks, size)
 
-    def _tokens2tensor(self, tokens: list[int], size: int) -> torch.Tensor:
+    def _tokens2tensor(self, tokens: typing.Sequence[int], size: int) -> torch.Tensor:
         out = torch.zeros(size, dtype=torch.int)
         if len(tokens) > size:
             raise IndexError('the length of tokens is greater than size!')
@@ -27,7 +27,7 @@ class Base:
         return out.to(self.device)
 
     @torch.no_grad()
-    def _greedy_search(self, tgt: torch.Tensor, **kwds: torch.Tensor) -> typing.Tuple[list[int], float]:
+    def _greedy_search(self, tgt: torch.Tensor, **kwds: torch.Tensor) -> typing.Tuple[typing.Sequence[int], float]:
         maxlen = self.model.conf.max_len
         eos = self.tokenizer[self.tokenizer.EOS]
         log_prob = torch.zeros(1, device=self.device)

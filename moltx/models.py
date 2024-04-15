@@ -24,7 +24,7 @@ class AdaMRClassifier(AdaMR):
             nn.Linear(d_hidden, num_classes)
         )
 
-    def load_ckpt(self, ckpt_files: typing.List[str]) -> None:
+    def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
         self.load_state_dict(torch.load(
             ckpt_files[0], map_location=torch.device('cpu')), strict=False)
 
@@ -45,7 +45,7 @@ class AdaMRRegression(AdaMR):
             nn.Linear(d_hidden, 1)
         )
 
-    def load_ckpt(self, ckpt_files: typing.List[str]) -> None:
+    def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
         self.load_state_dict(torch.load(
             ckpt_files[0], map_location=torch.device('cpu')), strict=False)
 

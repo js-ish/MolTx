@@ -43,7 +43,7 @@ class AbsPosEncoderDecoder(nn.Module):
         self.token_output = nn.Linear(
             conf.d_model, conf.token_size, bias=False)
 
-    def load_ckpt(self, ckpt_files: typing.List[str]) -> None:
+    def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
         self.load_state_dict(torch.load(
             ckpt_files[0], map_location=torch.device('cpu')))
 
@@ -89,7 +89,7 @@ class AbsPosEncoderCausal(nn.Module):
         self.token_output = nn.Linear(
             conf.d_model, conf.token_size, bias=False)
 
-    def load_ckpt(self, ckpt_files: typing.List[str]) -> None:
+    def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
         self.load_state_dict(torch.load(
             ckpt_files[0], map_location=torch.device('cpu')))
 
