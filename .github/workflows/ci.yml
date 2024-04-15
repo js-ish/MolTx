@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.10'
           cache: 'pip'
       - run: pip install -r test-requirements.txt -U
       - name: Run git-lint
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        py-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        py-version: ['3.7', '3.8', '3.9', '3.10']
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -41,4 +41,19 @@ jobs:
           cache: 'pip'
       - run: pip install -r test-requirements.txt -U
       - name: Run unit-tests
-        run: pytest tests
+        run: pytest tests --cov moltx
+      - name: Coveralls Parallel
+        uses: AndreMiras/coveralls-python-action@develop
+        with:
+          flag-name: "Integration Test - ${{ matrix.py-version }}"
+          parallel: true
+
+  report_coverage:
+    name: Report testing coverage
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: AndreMiras/coveralls-python-action@develop
+        with:
+          parallel-finished: true
