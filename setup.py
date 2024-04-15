@@ -30,7 +30,7 @@ setup(
     long_description_content_type='text/markdown',
     author="Michael Ding",
     author_email="yandy.ding@gmail.com",
-    license="Private",
+    license_files=('LICENSE',),
     url="https://gitlab.ish.org.cn/aidd/molgen/moltx-task",
     packages=find_packages(exclude=["tests", "train"]),
     find_links=["https://repo.huaweicloud.com/repository/pypi/simple"],
@@ -42,12 +42,13 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
         "Intended Audience :: Science/Research",
-        "License :: Private :: Do Not Upload",
         "Operating System :: POSIX",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ]
 )
