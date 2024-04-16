@@ -17,6 +17,10 @@ def test_abspos_embedding():
     x = torch.randint(64, 96, (2, 5))
     with pytest.raises(IndexError):
         emb(x)
+    x = torch.tensor([[1, 2, 0, 0, 0], [1, 2, 3, 4, 0]])
+    x = emb(x)
+    assert x[0, 2:, :].eq(0).all()
+    assert x[1, 4:, :].eq(0).all()
 
 
 def test_AbsPosEncoderDecoder():
