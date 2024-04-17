@@ -61,7 +61,7 @@ src, tgt, out = ds(smiles, labels)
 from moltx import models
 pretrained_conf = models.AdaMRConfig(token_size=512, max_len=256, ...)
 model = models.AdaMRClassifier(num_classes=2, conf=pretrained_conf)
-model.load_ckpt(['/path/to/adamr.ckpt'])
+model.load_ckpt('/path/to/adamr.ckpt')
 crt = nn.CrossEntropyLoss()
 optim = Adam(model.parameters(), lr=0.1)
 
@@ -80,7 +80,7 @@ values = [0.23, 0.12]
 src, tgt, out = ds(smiles, values)
 
 model = models.AdaMRRegression(conf=pretrained_conf)
-model.load_ckpt(['/path/to/adamr.ckpt'])
+model.load_ckpt('/path/to/adamr.ckpt')
 crt = nn.MSELoss()
 
 optim.zero_grad()
@@ -97,7 +97,7 @@ smiles = ["c1cccc1c", "CC[N+](C)(C)Cc1ccccc1Br"]
 src, tgt, out = ds(smiles)
 
 model = models.AdaMRDistGeneration(conf=pretrained_conf)
-model.load_ckpt(['/path/to/adamr.ckpt'])
+model.load_ckpt('/path/to/adamr.ckpt')
 crt = nn.CrossEntropyLoss(ignore_index=0)
 
 optim.zero_grad()
@@ -115,7 +115,7 @@ goals = [0.23, 0.12]
 src, tgt, out = ds(smiles, goals)
 
 model = models.AdaMRGoalGeneration(conf=pretrained_conf)
-model.load_ckpt(['/path/to/adamr.ckpt'])
+model.load_ckpt('/path/to/adamr.ckpt')
 crt = nn.CrossEntropyLoss(ignore_index=0)
 
 optim.zero_grad()
@@ -136,7 +136,7 @@ tk = tokenizers.MoltxTokenizer.from_jsonfile(spe_codes=True, token_size=512)
 # AdaMR
 conf = models.AdaMRConfig(...) # use config matching ckpt
 model = models.AdaMR(conf)
-model.load_ckpt(['/path/to/adamr.ckpt'])
+model.load_ckpt('/path/to/adamr.ckpt')
 pipeline = pipelines.AdaMR(tk, model)
 pipeline("C=CC=CC=C")
 # {"smiles": ["c1ccccc1"], probabilities: [0.9]}
@@ -144,7 +144,7 @@ pipeline("C=CC=CC=C")
 # Classifier
 conf = models.AdaMRConfig(...) # use config matching ckpt
 model = models.AdaMRClassifier(2, conf)
-model.load_ckpt(['/path/to/classifier.ckpt'])
+model.load_ckpt('/path/to/classifier.ckpt')
 pipeline = pipelines.AdaMRClassifier(tk, model)
 pipeline("C=CC=CC=C")
 # {"label": [1], "probability": [0.67]}
@@ -152,7 +152,7 @@ pipeline("C=CC=CC=C")
 # Regression
 conf = models.AdaMRConfig(...) # use config matching ckpt
 model = models.AdaMRRegression(2, conf)
-model.load_ckpt(['/path/to/regression.ckpt'])
+model.load_ckpt('/path/to/regression.ckpt')
 pipeline = pipelines.AdaMRRegression(tk, model)
 pipeline("C=CC=CC=C")
 # {"value": [0.467], "probability": [0.67]}
@@ -160,7 +160,7 @@ pipeline("C=CC=CC=C")
 # DistGeneration
 conf = models.AdaMRConfig(...) # use config matching ckpt
 model = models.AdaMRDistGeneration(conf)
-model.load_ckpt(['/path/to/distgen.ckpt'])
+model.load_ckpt('/path/to/distgen.ckpt')
 pipeline = pipelines.AdaMRDistGeneration(tk, model)
 pipeline(k=2)
 # {"smiles": ["c1ccccc1", "...."], probabilities: [0.9, 0.1]}
@@ -168,7 +168,7 @@ pipeline(k=2)
 # GoalGeneration
 conf = models.AdaMRConfig(...) # use config matching ckpt
 model = models.AdaMRGoalGeneration(conf)
-model.load_ckpt(['/path/to/goalgen.ckpt'])
+model.load_ckpt('/path/to/goalgen.ckpt')
 pipeline = pipelines.AdaMRGoalGeneration(tk, model)
 pipeline(0.48, k=2)
 # {"smiles": ["c1ccccc1", "...."], probabilities: [0.9, 0.1]}
