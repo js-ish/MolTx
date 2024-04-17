@@ -74,6 +74,4 @@ def test_moltx_tkz():
     assert stok._token_size == 2
     assert len(stok._tokens) == 2
     tokens = stok('BrCl')
-    assert tokens[0] == 1
-
-    #TODO add test for from_jsonfile
+    assert tokens[0] == 1 # <unk>

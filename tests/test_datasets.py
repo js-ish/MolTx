@@ -1,5 +1,5 @@
 import pytest
-from moltx import datasets
+from moltx import datasets, tokenizers as tkz
 
 
 def test_Base(tokenizer):
@@ -11,16 +11,17 @@ def test_Base(tokenizer):
     assert out[1, -1].item() == 0
 
 
-def test_AdaMR(tokenizer):
+def test_AdaMR():
+    tokenizer = tkz.MoltxTokenizer.from_jsonfile(spe_codes=True, token_size=128, dropout=0.5, spe_merges=256)
     ds = datasets.AdaMR(tokenizer)
-    s1 = ["<bos>CC[N+]CCBr", "<bos>c1ccc1"]
-    s2 = ["<bos>CC[N+]CCBr"]
+    s1 = ["CC[N+]CCBr", "c1ccccc1"]
+    s2 = ["CC[N+]CCBr"]
     with pytest.raises(RuntimeError):
         ds(s1, s2)
-    s2 = ["<bos>CC[N+](C)(C)Br", "<bos>c1ccccc1"]
+    s2 = ["CC[N+](C)(C)Br", ""]
     src, tgt, out = ds(s1, s2)
-    assert src.shape == (2, 7)
-    assert tgt.shape == out.shape == (2, 12)
+    assert src.size(0) == 2 and src.size(1) <= 8
+    assert tgt.shape == out.shape
     assert tgt[0, 1:].eq(out[0, :-1]).all()
 
 def test_AdaMRClassifier(tokenizer):
