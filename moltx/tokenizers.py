@@ -201,6 +201,7 @@ class MoltxTokenizer:
             m = self.REGEX.search(smiles, pos=pos)
         if len(smiles) > pos:
             tokens.extend(self._smi_tkz(smiles[pos:]))
+        self._update_tokens(tokens)
         return tokens
 
     def decode(self, token_idxs: typing.Sequence[int]) -> str:
@@ -209,7 +210,6 @@ class MoltxTokenizer:
 
     def encode(self, smiles: str) -> typing.Sequence[int]:
         tokens = self.smi2tokens(smiles)
-        self._update_tokens(tokens)
         return [self[t] for t in tokens]
 
     def __call__(self, smiles: str) -> typing.Sequence[int]:

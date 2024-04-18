@@ -27,10 +27,14 @@ class AdaMR(Base):
     def __call__(self, s1: typing.Sequence[str], s2: typing.Sequence[str]) -> typing.Tuple[torch.Tensor]:
         if len(s1) != len(s2):
             raise RuntimeError("the length of s1 and s2 must be the same!")
+        bos = self.tokenizer[self.tokenizer.BOS]
+        eos = self.tokenizer[self.tokenizer.EOS]
         src = self._tokenize(s1)
-        tgt = self._tokenize([f"{self.tokenizer.BOS}{smi}" for smi in s2])
-        out = self._tokenize([f"{smi}{self.tokenizer.EOS}" for smi in s2])
-        return src, tgt, out
+        s2tokens = [self.tokenizer(smi) for smi in s2]
+        size = max(map(len, s2tokens)) + 1
+        tgt = [self._tokens2tensor([bos] + tks, size).unsqueeze(0) for tks in s2tokens]
+        out = [self._tokens2tensor(tks + [eos], size).unsqueeze(0) for tks in s2tokens]
+        return src, torch.concat(tgt), torch.concat(out)
 
 
 class AdaMRClassifier(AdaMR):
