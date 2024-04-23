@@ -31,14 +31,8 @@ from torch.optim import Adam
 from moltx import nets, models
 
 ## use custom config
-conf = nets.AbsPosEncoderDecoderConfig(token_size=512, max_len=256)
+conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMR(conf)
-
-## or use default large config
-model = models.AdaMR()
-
-## or use base config
-model = models.AdaMR(models.AdaMR.CONFIG_BASE)
 
 crt = nn.CrossEntropyLoss(ignore_index=0)
 optim = Adam(model.parameters(), lr=0.1)
@@ -68,7 +62,7 @@ labels = [0, 1]
 src, tgt, out = ds(smiles, labels)
 
 from moltx import nets, models
-pretrained_conf = nets.AbsPosEncoderDecoderConfig(token_size=512, max_len=256, ...)
+pretrained_conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMRClassifier(num_classes=2, conf=pretrained_conf)
 model.load_ckpt('/path/to/adamr.ckpt')
 crt = nn.CrossEntropyLoss()
@@ -143,7 +137,7 @@ from moltx import nets, models, pipelines, tokenizers
 tk = tokenizers.MoltxTokenizer.from_jsonfile(spe_codes=True, token_size=512)
 
 # AdaMR
-conf = nets.AbsPosEncoderDecoderConfig(...) # use config matching ckpt
+conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMR(conf)
 model.load_ckpt('/path/to/adamr.ckpt')
 pipeline = pipelines.AdaMR(tk, model)
@@ -151,7 +145,7 @@ pipeline("C=CC=CC=C")
 # {"smiles": ["c1ccccc1"], probabilities: [0.9]}
 
 # Classifier
-conf = nets.AbsPosEncoderDecoderConfig(...) # use config matching ckpt
+conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMRClassifier(2, conf)
 model.load_ckpt('/path/to/classifier.ckpt')
 pipeline = pipelines.AdaMRClassifier(tk, model)
@@ -159,7 +153,7 @@ pipeline("C=CC=CC=C")
 # {"label": [1], "probability": [0.67]}
 
 # Regression
-conf = nets.AbsPosEncoderDecoderConfig(...) # use config matching ckpt
+conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMRRegression(2, conf)
 model.load_ckpt('/path/to/regression.ckpt')
 pipeline = pipelines.AdaMRRegression(tk, model)
@@ -167,7 +161,7 @@ pipeline("C=CC=CC=C")
 # {"value": [0.467], "probability": [0.67]}
 
 # DistGeneration
-conf = nets.AbsPosEncoderDecoderConfig(...) # use config matching ckpt
+conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMRDistGeneration(conf)
 model.load_ckpt('/path/to/distgen.ckpt')
 pipeline = pipelines.AdaMRDistGeneration(tk, model)
@@ -175,7 +169,7 @@ pipeline(k=2)
 # {"smiles": ["c1ccccc1", "...."], probabilities: [0.9, 0.1]}
 
 # GoalGeneration
-conf = nets.AbsPosEncoderDecoderConfig(...) # use config matching ckpt
+conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMRGoalGeneration(conf)
 model.load_ckpt('/path/to/goalgen.ckpt')
 pipeline = pipelines.AdaMRGoalGeneration(tk, model)
