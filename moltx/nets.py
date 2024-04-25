@@ -4,10 +4,10 @@ from dataclasses import dataclass
 
 
 class AbsPosEmbedding(nn.Module):
-    def __init__(self, token_size: int, max_len: int, d_model: int, dropout: float = 0.1, precision: torch.dtype = torch.float32) -> None:
+    def __init__(self, token_size: int, max_len: int, d_model: int, dropout: float = 0.1, dtype: torch.dtype = torch.float32) -> None:
         super().__init__()
-        self.token_embedding = nn.Embedding(token_size, d_model, padding_idx=0, dtype=precision)
-        self.pos_embedding = nn.Embedding(max_len + 1, d_model, padding_idx=0, dtype=precision)
+        self.token_embedding = nn.Embedding(token_size, d_model, padding_idx=0, dtype=dtype)
+        self.pos_embedding = nn.Embedding(max_len + 1, d_model, padding_idx=0, dtype=dtype)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -29,7 +29,7 @@ class AbsPosEncoderDecoderConfig:
     num_encoder_layers: int = 6
     num_decoder_layers: int = 6
     dropout: float = 0.1
-    precision: torch.dtype = torch.float32
+    dtype: torch.dtype = None
 
 
 class AbsPosEncoderDecoder(nn.Module):
@@ -37,11 +37,11 @@ class AbsPosEncoderDecoder(nn.Module):
         super().__init__()
         self.conf = conf
         self.embedding = AbsPosEmbedding(
-            conf.token_size, conf.max_len, conf.d_model, conf.dropout)
+            conf.token_size, conf.max_len, conf.d_model, conf.dropout, conf.dtype)
         self.transformer = nn.Transformer(
-            conf.d_model, conf.nhead, conf.num_encoder_layers, conf.num_decoder_layers, dropout=conf.dropout, activation='gelu', batch_first=True, dtype=conf.precision)
+            conf.d_model, conf.nhead, conf.num_encoder_layers, conf.num_decoder_layers, dropout=conf.dropout, activation='gelu', batch_first=True, dtype=conf.dtype)
         self.token_output = nn.Linear(
-            conf.d_model, conf.token_size, bias=False, dtype=conf.precision)
+            conf.d_model, conf.token_size, bias=False, dtype=conf.dtype)
 
     def load_ckpt(self, *ckpt_files: str) -> None:
         self.load_state_dict(torch.load(
@@ -74,21 +74,20 @@ class AbsPosEncoderCausalConfig:
     nhead: int = 8
     num_layers: int = 12
     dropout: float = 0.1
-    precision: torch.dtype = torch.float32
-
+    dtype: torch.dtype = None
 
 class AbsPosEncoderCausal(nn.Module):
     def __init__(self, conf: AbsPosEncoderCausalConfig) -> None:
         super().__init__()
         self.conf = conf
         self.embedding = AbsPosEmbedding(
-            conf.token_size, conf.max_len, conf.d_model, conf.dropout)
+            conf.token_size, conf.max_len, conf.d_model, conf.dropout, conf.dtype)
         layer = nn.TransformerEncoderLayer(
-            conf.d_model, conf.nhead, dropout=conf.dropout, batch_first=True, activation='gelu', dtype=conf.precision)
+            conf.d_model, conf.nhead, dropout=conf.dropout, batch_first=True, activation='gelu', dtype=conf.dtype)
         self.transformer = nn.TransformerEncoder(
-            layer, conf.num_layers, norm=nn.LayerNorm(conf.d_model), dtype=conf.precision)
+            layer, conf.num_layers, norm=nn.LayerNorm(conf.d_model))
         self.token_output = nn.Linear(
-            conf.d_model, conf.token_size, bias=False, dtype=conf.precision)
+            conf.d_model, conf.token_size, bias=False, dtype=conf.dtype)
 
     def load_ckpt(self, *ckpt_files: str) -> None:
         self.load_state_dict(torch.load(

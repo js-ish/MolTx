@@ -13,6 +13,7 @@ class AdaMR(nets.AbsPosEncoderDecoder):
         num_encoder_layers=12,
         num_decoder_layers=12,
         dropout=0.1,
+        dtype=torch.bfloat16
     )
 
     CONFIG_BASE = nets.AbsPosEncoderDecoderConfig(
@@ -23,6 +24,7 @@ class AdaMR(nets.AbsPosEncoderDecoder):
         num_encoder_layers=6,
         num_decoder_layers=6,
         dropout=0.1,
+        dtype=torch.float32
     )
 
     def __init__(self, conf: nets.AbsPosEncoderDecoderConfig = CONFIG_LARGE) -> None:
@@ -38,10 +40,10 @@ class AdaMRClassifier(AdaMR):
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
             nn.Dropout(conf.dropout),
-            nn.Linear(conf.d_model, d_hidden, dtype=conf.precision),
+            nn.Linear(conf.d_model, d_hidden, dtype=conf.dtype),
             nn.Tanh(),
             nn.Dropout(conf.dropout),
-            nn.Linear(d_hidden, num_classes, dtype=conf.precision)
+            nn.Linear(d_hidden, num_classes, dtype=conf.dtype)
         )
 
     def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
@@ -59,10 +61,10 @@ class AdaMRRegression(AdaMR):
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
             nn.Dropout(conf.dropout),
-            nn.Linear(conf.d_model, d_hidden, dtype=conf.precision),
+            nn.Linear(conf.d_model, d_hidden, dtype=conf.dtype),
             nn.Tanh(),
             nn.Dropout(conf.dropout),
-            nn.Linear(d_hidden, 1, dtype=conf.precision)
+            nn.Linear(d_hidden, 1, dtype=conf.dtype)
         )
 
     def load_ckpt(self, *ckpt_files: str) -> None:
