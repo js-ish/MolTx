@@ -66,7 +66,8 @@ def test_moltx_tkz():
 
     datadir = '/tmp'
     tok.dump(os.path.join(datadir, 'tks_smiles.json'))
-    tok2 = tkz.MoltxTokenizer.from_jsonfile(datadir, token_size=128)
+    conf = tkz.MoltxPretrainConfig(token_size=128, spe=False, data_dir=datadir)
+    tok2 = tkz.MoltxTokenizer.from_pretrain(conf=conf)
     assert tok._tokens == tok2._tokens
     assert tok._token_idx == tok2._token_idx
 

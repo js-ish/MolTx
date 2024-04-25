@@ -18,8 +18,8 @@ pip install moltx
 import torch
 
 # prepare dataset
-from moltx import datasets, tokenizers
-tk = tokenizers.MoltxTokenizer.from_jsonfile(spe_codes=True, token_size=512)
+from moltx import datasets, tokenizers, models
+tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Pretrain)
 ds = datasets.AdaMR(tokenizer=tk, device=torch.device('cpu'))
 generic_smiles = ["C=CC=CC=C", "...."]
 canonical_smiles = ["c1cccc1c", "..."]
@@ -54,7 +54,7 @@ torch.save(model.state_dict(), '/path/to/adamr.ckpt')
 ```python
 # Classifier finetune
 from moltx import datasets, tokenizers
-tk = tokenizers.MoltxTokenizer.from_jsonfile(spe_codes=True, token_size=512)
+tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Prediction)
 
 ds = datasets.AdaMRClassifier(tokenizer=tk, device=torch.device('cpu'))
 smiles = ["c1cccc1c", "CC[N+](C)(C)Cc1ccccc1Br"]
@@ -95,6 +95,7 @@ optim.step()
 torch.save(model.state_dict(), '/path/to/regression.ckpt')
 
 # Distributed Generation
+tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Generation)
 ds = datasets.AdaMRDistGeneration(tokenizer=tk, device=torch.device('cpu'))
 smiles = ["c1cccc1c", "CC[N+](C)(C)Cc1ccccc1Br"]
 src, tgt, out = ds(smiles)
@@ -134,9 +135,8 @@ torch.save(model.state_dict(), '/path/to/goalgen.ckpt')
 
 ```python
 from moltx import nets, models, pipelines, tokenizers
-tk = tokenizers.MoltxTokenizer.from_jsonfile(spe_codes=True, token_size=512)
-
 # AdaMR
+tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Generation)
 conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMR(conf)
 model.load_ckpt('/path/to/adamr.ckpt')
@@ -145,6 +145,7 @@ pipeline("C=CC=CC=C")
 # {"smiles": ["c1ccccc1"], probabilities: [0.9]}
 
 # Classifier
+tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Prediction)
 conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMRClassifier(2, conf)
 model.load_ckpt('/path/to/classifier.ckpt')
@@ -161,6 +162,7 @@ pipeline("C=CC=CC=C")
 # {"value": [0.467], "probability": [0.67]}
 
 # DistGeneration
+tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Generation)
 conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
 model = models.AdaMRDistGeneration(conf)
 model.load_ckpt('/path/to/distgen.ckpt')

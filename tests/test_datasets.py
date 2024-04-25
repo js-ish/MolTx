@@ -1,5 +1,5 @@
 import pytest
-from moltx import datasets, tokenizers as tkz
+from moltx import datasets, models, tokenizers as tkz
 
 
 def test_Base(tokenizer):
@@ -12,7 +12,7 @@ def test_Base(tokenizer):
 
 
 def test_AdaMR():
-    tokenizer = tkz.MoltxTokenizer.from_jsonfile(spe_codes=True, token_size=128, dropout=0.5, spe_merges=256)
+    tokenizer = tkz.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Pretrain)
     ds = datasets.AdaMR(tokenizer)
     s1 = ["CC[N+]CCBr", "c1ccccc1"]
     s2 = ["CC[N+]CCBr"]

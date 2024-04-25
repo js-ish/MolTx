@@ -3,6 +3,7 @@ import typing
 import re
 import random
 import os
+from dataclasses import dataclass
 
 
 class SmilesAtomwiseTokenizer:
@@ -61,6 +62,8 @@ class SmilesTokenizer:
         if len(smiles) == 1:
             return [smiles]
         tokens = self.smi_tkz(smiles)
+        if self.dropout >= 0.999999 or not self.bpe_codes:
+            return tokens
         while len(tokens) > 1:
             pairs = [(self.bpe_codes[pair], i, pair) for (i, pair) in enumerate(zip(tokens, tokens[1:])) if (
                 not self.dropout or random.random() > self.dropout) and pair in self.bpe_codes]
@@ -110,6 +113,16 @@ class NumericalTokenizer:
         return tokens
 
 
+@dataclass
+class MoltxPretrainConfig:
+    token_size: int
+    fmt: str = 'smiles'
+    data_dir: str = os.path.join(os.path.dirname(__file__), 'data')
+    spe: bool = True
+    spe_dropout: float = 0.0
+    spe_merges: int = -1
+
+
 class MoltxTokenizer:
     REGEX = re.compile(r"<\w{3}>")
     PAD = "<pad>"
@@ -119,18 +132,32 @@ class MoltxTokenizer:
     SEP = "<sep>"
     CLS = "<cls>"
     RESERVED = (PAD, UNK, BOS, EOS, SEP, CLS)
-    DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
-    def __init__(self, token_size: int = 512, freeze: bool = False, dropout: float = 1.000000001, spe_codes: typing.Optional[str] = None, spe_merges: int = -1) -> None:
+    @classmethod
+    def from_pretrain(cls, conf: MoltxPretrainConfig) -> 'MoltxTokenizer':
+        datadir = conf.data_dir
+        kwargs = {
+            'token_size': conf.token_size
+        }
+        if conf.spe:
+            kwargs['spe_codes_path'] = os.path.join(datadir, f'spe_{conf.fmt}.txt')
+            kwargs['spe_dropout'] = conf.spe_dropout
+            kwargs['spe_merges'] = conf.spe_merges
+        tkz = cls(**kwargs, freeze=True)
+        tkz.load(os.path.join(datadir, f'tks_{conf.fmt}.json'))
+        return tkz
+
+    def __init__(self, token_size: int, freeze: bool = False, spe_codes_path: typing.Optional[str] = None, spe_dropout: float = 0.0, spe_merges: int = -1) -> None:
         self._tokens = []
         self._token_idx = {}
         self._token_size = token_size
         self._freeze = freeze
         self._update_tokens(self.RESERVED)
-        spe_kwargs = {'dropout': dropout}
-        if spe_codes is not None:
-            spe_kwargs['codes_path'] = spe_codes
+        spe_kwargs = {}
+        if spe_codes_path is not None:
+            spe_kwargs['codes_path'] = spe_codes_path
             spe_kwargs['merges'] = spe_merges
+            spe_kwargs['dropout'] = spe_dropout
         self._smi_tkz = SmilesTokenizer(**spe_kwargs)
 
     def _update_tokens(self, tokens: typing.Sequence[str]) -> None:
@@ -160,16 +187,6 @@ class MoltxTokenizer:
 
     def __len__(self) -> int:
         return len(self._tokens)
-
-    @classmethod
-    def from_jsonfile(cls, datadir: typing.Optional[str] = None, fmt: str = 'smiles', spe_codes: bool = False, **kwargs) -> 'MoltxTokenizer':
-        if datadir is None:
-            datadir = cls.DATADIR
-        if spe_codes:
-            kwargs['spe_codes'] = os.path.join(datadir, f'spe_{fmt}.txt')
-        tkz = cls(**kwargs, freeze=True)
-        tkz.load(os.path.join(datadir, f'tks_{fmt}.json'))
-        return tkz
 
     def loads(self, tokens_json: str) -> 'MoltxTokenizer':
         tokens = json.loads(tokens_json)['tokens']
