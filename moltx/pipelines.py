@@ -88,9 +88,9 @@ class Base:
         for line in tgt:
             idx = (line == eos).nonzero(as_tuple=True)[0]
             if idx.numel() > 0:
-                smiles.append(self.tokenizer.decode(line[:idx[0]].tolist()))
+                smiles.append(self.tokenizer.decode(line[1:idx[0]].tolist()))
             else:
-                smiles.append(self.tokenizer.decode(line.tolist()))
+                smiles.append(self.tokenizer.decode(line[1:].tolist()))
         return smiles, probs
 
 
