@@ -18,10 +18,10 @@ class AdaMRClassifier(AdaMR):
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
             nn.Dropout(conf.dropout),
-            nn.Linear(conf.d_model, d_hidden),
+            nn.Linear(conf.d_model, d_hidden, dtype=conf.precision),
             nn.Tanh(),
             nn.Dropout(conf.dropout),
-            nn.Linear(d_hidden, num_classes)
+            nn.Linear(d_hidden, num_classes, dtype=conf.precision)
         )
 
     def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
@@ -39,10 +39,10 @@ class AdaMRRegression(AdaMR):
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
             nn.Dropout(conf.dropout),
-            nn.Linear(conf.d_model, d_hidden),
+            nn.Linear(conf.d_model, d_hidden, dtype=conf.precision),
             nn.Tanh(),
             nn.Dropout(conf.dropout),
-            nn.Linear(d_hidden, 1)
+            nn.Linear(d_hidden, 1, dtype=conf.precision)
         )
 
     def load_ckpt(self, *ckpt_files: str) -> None:
