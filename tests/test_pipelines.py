@@ -15,12 +15,14 @@ def test_AdaMR(tokenizer, model_conf):
     assert isinstance(out['smiles'], list) and len(out['smiles']) == 2 and isinstance(out['smiles'][0], str)
     assert isinstance(out['probabilities'], list) and len(
         out['probabilities']) == 2
+    assert '<bos>' not in out['smiles'][0]
 
     out = pipeline("CC[N+](C)(C)Br", k=1, gentype='beam')
     assert 'smiles' in out and 'probabilities' in out
     assert isinstance(out['smiles'], list) and len(out['smiles']) == 1 and isinstance(out['smiles'][0], str)
     assert isinstance(out['probabilities'], list) and len(
         out['probabilities']) == 1
+    assert '<bos>' not in out['smiles'][0]
 
 
 def test_AdaMRClassifier(tokenizer, model_conf):
