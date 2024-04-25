@@ -49,6 +49,17 @@ def test_AbsPosEncoderDecoder():
     gen = model.forward_generation(tokens, tokens)
     assert gen.shape == (32, 16)
 
+    conf = nets.AbsPosEncoderDecoderConfig(
+        token_size=16, max_len=32, d_model=8, nhead=2,
+        num_encoder_layers=2, num_decoder_layers=2, dtype=torch.bfloat16)
+    model = nets.AbsPosEncoderDecoder(conf=conf)
+    model.eval()
+    model.requires_grad_(False)
+    
+    batch = torch.randint(1, 16, (2, 32))
+    out = model.forward_(batch, batch)
+    assert out.shape == (2, 32, 8)
+
 
 def test_AbsPosEncoderCausal():
     conf = nets.AbsPosEncoderCausalConfig(
@@ -74,3 +85,13 @@ def test_AbsPosEncoderCausal():
     assert feat.eq(out[-1]).all()
     gen = model.forward_generation(tokens)
     assert gen.shape == (32, 16)
+
+    conf = nets.AbsPosEncoderCausalConfig(
+        token_size=16, max_len=32, d_model=8, nhead=2, num_layers=2, dtype=torch.bfloat16)
+    model = nets.AbsPosEncoderCausal(conf=conf)
+    model.eval()
+    model.requires_grad_(False)
+
+    batch = torch.randint(1, 16, (2, 32))
+    out = model.forward_(batch)
+    assert out.shape == (2, 32, 8)
