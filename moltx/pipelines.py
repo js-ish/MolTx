@@ -124,9 +124,11 @@ class AdaMR(Base):
         return smiles, probs
 
     def _call_beam(self, src: torch.Tensor, tgt: torch.Tensor, k: int) -> typing.Mapping:
-        src = src.unsqueeze(0).repeat(k, 1)
-        tgt = tgt.unsqueeze(0).repeat(k, 1)
-        return self._beam_search(src=src, tgt=tgt)
+        beam_k = max(k, 3)
+        src = src.unsqueeze(0).repeat(beam_k, 1)
+        tgt = tgt.unsqueeze(0).repeat(beam_k, 1)
+        smiles, probs = self._beam_search(src=src, tgt=tgt)
+        return smiles[:k], probs[:k]
 
 
 class AdaMRClassifier(AdaMR):
