@@ -76,6 +76,7 @@ class AbsPosEncoderCausalConfig:
     dropout: float = 0.1
     dtype: torch.dtype = None
 
+
 class AbsPosEncoderCausal(nn.Module):
     def __init__(self, conf: AbsPosEncoderCausalConfig) -> None:
         super().__init__()
