@@ -95,4 +95,3 @@ def test_AbsPosEncoderCausal():
     batch = torch.randint(1, 16, (2, 32))
     out = model.forward_(batch)
     assert out.shape == (2, 32, 8)
-    
