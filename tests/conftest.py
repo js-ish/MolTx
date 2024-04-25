@@ -1,7 +1,7 @@
 import os.path
 import pytest
 from moltx import tokenizers as tkz
-from moltx import models
+from moltx import nets, models
 
 
 @pytest.fixture
@@ -16,6 +16,6 @@ def tokenizer():
 
 @pytest.fixture
 def model_conf():
-    return models.AdaMRConfig(
+    return nets.AbsPosEncoderDecoderConfig(
         token_size=16, max_len=32, d_model=8, nhead=2,
         num_encoder_layers=2, num_decoder_layers=2)

@@ -4,16 +4,36 @@ import torch.nn as nn
 from moltx import nets
 
 
-AdaMRConfig = nets.AbsPosEncoderDecoderConfig
-
-
 class AdaMR(nets.AbsPosEncoderDecoder):
+    CONFIG_LARGE = nets.AbsPosEncoderDecoderConfig(
+        token_size=512,  # max(spe_merge) = 240
+        max_len=512,
+        d_model=768,
+        nhead=12,
+        num_encoder_layers=12,
+        num_decoder_layers=12,
+        dropout=0.1,
+    )
+
+    CONFIG_BASE = nets.AbsPosEncoderDecoderConfig(
+        token_size=512,  # max(spe_merge) = 240
+        max_len=512,
+        d_model=768,
+        nhead=8,
+        num_encoder_layers=6,
+        num_decoder_layers=6,
+        dropout=0.1,
+    )
+
+    def __init__(self, conf: nets.AbsPosEncoderDecoderConfig = CONFIG_LARGE) -> None:
+        super().__init__(conf=conf)
+
     def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:
         return super().forward_generation(src, tgt)
 
 
 class AdaMRClassifier(AdaMR):
-    def __init__(self, num_classes: int, conf: AdaMRConfig) -> None:
+    def __init__(self, num_classes: int, conf: nets.AbsPosEncoderDecoderConfig) -> None:
         super().__init__(conf=conf)
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
@@ -34,7 +54,7 @@ class AdaMRClassifier(AdaMR):
 
 
 class AdaMRRegression(AdaMR):
-    def __init__(self, conf: AdaMRConfig) -> None:
+    def __init__(self, conf: nets.AbsPosEncoderDecoderConfig) -> None:
         super().__init__(conf=conf)
         d_hidden = conf.d_model // 2
         self.fc = nn.Sequential(
