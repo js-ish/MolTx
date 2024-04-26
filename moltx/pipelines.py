@@ -105,30 +105,24 @@ class AdaMR(Base):
         return src, tgt
 
     # gentype: greedy, beam
-    def __call__(self, smiles: str, k: int = 1, gentype: str = 'greedy') -> typing.Mapping:
-        assert k <= 10
+    def __call__(self, smiles: str, gentype: str = 'greedy') -> typing.Mapping:
         src, tgt = self._model_args(smiles)
         m = getattr(self, f"_call_{gentype}")
-        smis, probs = m(src, tgt, k)
+        smi, prob = m(src, tgt)
         return {
-            'smiles': smis,
-            'probabilities': probs
+            'smiles': smi,
+            'probability': prob
         }
 
-    def _call_greedy(self, src: torch.Tensor, tgt: torch.Tensor, k: int) -> typing.Mapping:
-        smiles, probs = [], []
-        for _ in range(k):
-            smi, prob = self._greedy_search(src=src, tgt=tgt)
-            smiles.append(smi)
-            probs.append(prob)
-        return smiles, probs
+    def _call_greedy(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
+        return self._greedy_search(src=src, tgt=tgt)
 
-    def _call_beam(self, src: torch.Tensor, tgt: torch.Tensor, k: int) -> typing.Mapping:
-        beam_k = max(k, 3)
+    def _call_beam(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
+        beam_k = 3
         src = src.unsqueeze(0).repeat(beam_k, 1)
         tgt = tgt.unsqueeze(0).repeat(beam_k, 1)
         smiles, probs = self._beam_search(src=src, tgt=tgt)
-        return smiles[:k], probs[:k]
+        return smiles[0], probs[0]
 
 
 class AdaMRClassifier(AdaMR):
