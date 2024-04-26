@@ -65,3 +65,59 @@ def test_AdaMRGoalGeneration(tokenizer):
     assert src.shape == (2, 1)
     assert tgt.shape == (2, 7)
     assert out.shape == (2, 7)
+
+def test_AdaMR2(tokenizer):
+    ds = datasets.AdaMR2(tokenizer)
+    s1 = ["CC[N+]CCBr", "c1ccccc1"]
+    s2 = ["CC[N+]CCBr"]
+    with pytest.raises(RuntimeError):
+        ds(s1, s2)
+    s2 = ["CC[N+](C)(C)Br", ""]
+    tgt, out = ds(s1, s2)
+    assert tgt.shape == out.shape
+    assert tgt.size(0) == 2 and tgt.size(1) == 17
+    assert tgt[0, 7:].eq(out[0, 6:-1]).all()
+    assert out[0, :6].eq(0).all()
+
+def test_AdaMR2Classifier(tokenizer):
+    ds = datasets.AdaMR2Classifier(tokenizer)
+    smiles = ["CC[N+]CCBr", "Cc1ccc1"]
+    labels = [1, 2]
+    with pytest.raises(RuntimeError):
+        ds(smiles, labels[:1])
+    tgt, out = ds(smiles, labels)
+    assert tgt.shape == (2, 9)
+    assert out.shape == (2, 1)
+
+def test_AdaMR2Regression(tokenizer):
+    ds = datasets.AdaMR2Regression(tokenizer)
+    smiles = ["CC[N+]CCBr", "Cc1ccc1"]
+    values = [1.1, 1.2]
+    with pytest.raises(RuntimeError):
+        ds(smiles, values[:1])
+    tgt, out = ds(smiles, values)
+    assert tgt.shape == (2, 9)
+    assert out.shape == (2, 1)
+
+
+def test_AdaMR2DistGeneration(tokenizer):
+    ds = datasets.AdaMR2DistGeneration(tokenizer)
+    smiles = ["CC[N+]CCBr", "c1ccc1"]
+    tgt, out = ds(smiles)
+    assert tgt.shape == (2, 8)
+    assert out.shape == (2, 8)
+    assert out[0, 0].item() == 0
+    assert tgt[0, 2:].eq(out[0, 1:-1]).all()
+
+
+def test_AdaMR2GoalGeneration(tokenizer):
+    ds = datasets.AdaMR2GoalGeneration(tokenizer)
+    smiles = ["CC[N+]CCBr", "c1ccc1"]
+    goals = [1.1, 1.2]
+    goal, tgt, out = ds(smiles, goals)
+    assert goal.shape == (2, 1)
+    assert tgt.shape == (2, 8)
+    assert out.shape == (2, 8)
+    assert out[0, 0].item() == 0
+    assert tgt[0, 2:].eq(out[0, 1:-1]).all()
+
