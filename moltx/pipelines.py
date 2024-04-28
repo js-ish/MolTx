@@ -60,40 +60,45 @@ class Base:
         return self.tokenizer.decode(tgt[prefixlen:].tolist()), log_prob.exp().item()
 
     @torch.no_grad()
-    def _beam_search(self, tgt: torch.Tensor, **kwds: torch.Tensor):
-        # tgt: [beam, seqlen]
+    def _beam_search(self, tgt: torch.Tensor, beam_width: int = 3, **kwds: torch.Tensor):
+        # tgt: [seqlen]
         # when beam_width == 1, beam search is equal to greedy search
-        if tgt.dim() != 2:
-            raise RuntimeError("tgt must be batched!")
         maxlen = self.model.conf.max_len
         prefixlen = tgt.size(-1)
         eos = self.tokenizer[self.tokenizer.EOS]
         token_size = self.model.conf.token_size
-        beam_width = tgt.size(0)
-        log_probs = torch.zeros(beam_width, 1, device=self.device)
-        meet_end = torch.zeros_like(log_probs, dtype=torch.bool)
+        smiles = []
+        probs = []
+        log_probs, next_tokens = self.model(tgt=tgt, **kwds)[-1].log_softmax(-1).topk(k=beam_width, dim=0)  # [beam]
+        tgt = torch.concat((tgt.unsqueeze(0).repeat(beam_width, 1), next_tokens.unsqueeze(-1)), dim=-1)
+        if 'src' in kwds:
+            kwds['src'] = kwds['src'].unsqueeze(0).repeat(beam_width, 1)
+        log_probs = log_probs.unsqueeze(-1)
         for _ in range(maxlen - tgt.size(-1)):
             next_log_probs = self.model(
                 tgt=tgt, **kwds)[:, -1].log_softmax(-1)  # [beam, token_size]
-            # [beam * tokensize, 1]
-            next_log_probs = (next_log_probs + log_probs).view(-1, 1)
+            next_log_probs = (next_log_probs + log_probs).view(-1, 1)  # [beam * tokensize, 1]
             log_probs, idx = next_log_probs.topk(
                 k=beam_width, dim=0)  # [beam, 1]
             tgt_idx = idx.div(token_size, rounding_mode="floor")  # [beam, 1]
             next_tokens = idx - tgt_idx * token_size  # [beam, 1]
-            meet_end |= next_tokens.eq(eos)
-            tgt = tgt[tgt_idx.squeeze()]
+            meet_end = (next_tokens.squeeze(1).eq(eos).nonzero()).squeeze(1)
+            if meet_end.numel() > 0:
+                beam_width -= meet_end.size(0)
+                probs.extend(log_probs.index_select(0, meet_end).squeeze(1).exp().tolist())
+                end_tgt = tgt.index_select(0, tgt_idx.index_select(0, meet_end).squeeze(1))
+                smiles.extend(map(self.tokenizer.decode, end_tgt[:, prefixlen:].tolist()))
+                if beam_width == 0:
+                    return smiles, probs
+            not_end = (next_tokens.squeeze(1).ne(eos).nonzero()).squeeze(1)
+            log_probs = log_probs.index_select(0, not_end)
+            next_tokens = next_tokens.index_select(0, not_end)
+            tgt = tgt.index_select(0, tgt_idx.index_select(0, not_end).squeeze(1))
             tgt = torch.concat((tgt, next_tokens), dim=-1)
-            if meet_end.all():
-                break
-        probs = log_probs.squeeze().exp().tolist()
-        smiles = []
-        for line in tgt:
-            idx = (line == eos).nonzero(as_tuple=True)[0]
-            if idx.numel() > 0:
-                smiles.append(self.tokenizer.decode(line[prefixlen:idx[0]].tolist()))
-            else:
-                smiles.append(self.tokenizer.decode(line[prefixlen:].tolist()))
+            if 'src' in kwds:
+                kwds['src'] = kwds['src'].index_select(0, tgt_idx.index_select(0, not_end).squeeze(1))
+        probs.extend(log_probs.squeeze(1).exp().tolist())
+        smiles.extend(map(self.tokenizer.decode, tgt[:, prefixlen:].tolist()))
         return smiles, probs
 
 
@@ -121,10 +126,7 @@ class AdaMR(Base):
         return self._random_sample(src=src, tgt=tgt)
 
     def _do_canonicalize(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
-        beam_k = 3
-        src = src.unsqueeze(0).repeat(beam_k, 1)
-        tgt = tgt.unsqueeze(0).repeat(beam_k, 1)
-        smiles, probs = self._beam_search(src=src, tgt=tgt)
+        smiles, probs = self._beam_search(src=src, tgt=tgt, beam_width=3)
         return smiles[0], probs[0]
 
 
@@ -215,8 +217,6 @@ class AdaMR2(Base):
         return self._random_sample(tgt=tgt)
 
     def _do_canonicalize(self, tgt: torch.Tensor) -> typing.Mapping:
-        beam_k = 3
-        tgt = tgt.unsqueeze(0).repeat(beam_k, 1)
         smiles, probs = self._beam_search(tgt=tgt)
         return smiles[0], probs[0]
 
