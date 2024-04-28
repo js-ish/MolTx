@@ -94,19 +94,19 @@ class AbsPosEncoderCausal(nn.Module):
         self.load_state_dict(torch.load(
             ckpt_files[0], map_location=torch.device('cpu')))
 
-    def forward_(self, x: torch.Tensor) -> torch.Tensor:
+    def forward_(self, tgt: torch.Tensor) -> torch.Tensor:
         mask = nn.Transformer.generate_square_subsequent_mask(
-            x.size(-1), device=x.device)
-        x = self.embedding(x)
-        return self.transformer(x, mask=mask, is_causal=True)
+            tgt.size(-1), device=tgt.device)
+        tgt = self.embedding(tgt)
+        return self.transformer(tgt, mask=mask, is_causal=True)
 
-    def forward_feature(self, x: torch.Tensor) -> torch.Tensor:
-        out = self.forward_(x)
-        indices = (x > 0).sum(dim=-1, keepdim=True) - 1
+    def forward_feature(self, tgt: torch.Tensor) -> torch.Tensor:
+        out = self.forward_(tgt)
+        indices = (tgt > 0).sum(dim=-1, keepdim=True) - 1
         indices = indices.unsqueeze(-1).repeat(*
-                                               [1 for _ in range(x.dim())], out.shape[-1])
+                                               [1 for _ in range(tgt.dim())], out.shape[-1])
         return torch.gather(input=out, dim=-2, index=indices).squeeze()
 
-    def forward_generation(self, x: torch.Tensor) -> torch.Tensor:
-        out = self.forward_(x)
+    def forward_generation(self, tgt: torch.Tensor) -> torch.Tensor:
+        out = self.forward_(tgt)
         return self.token_output(out)

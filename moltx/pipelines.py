@@ -29,6 +29,7 @@ class Base:
     @torch.no_grad()
     def _greedy_search(self, tgt: torch.Tensor, **kwds: torch.Tensor) -> typing.Tuple[typing.Sequence[int], float]:
         maxlen = self.model.conf.max_len
+        prefixlen = tgt.size(-1)
         eos = self.tokenizer[self.tokenizer.EOS]
         log_prob = torch.zeros(1, device=self.device)
         for _ in range(maxlen - tgt.size(-1)):
@@ -38,11 +39,12 @@ class Base:
                 break
             log_prob += next_log_prob
             tgt = torch.concat((tgt, next_token), dim=-1)
-        return self.tokenizer.decode(tgt[1:].tolist()), log_prob.exp().item()
+        return self.tokenizer.decode(tgt[prefixlen:].tolist()), log_prob.exp().item()
 
     @torch.no_grad()
     def _random_sample(self, tgt: torch.Tensor, temperature=1, **kwds: torch.Tensor):
         maxlen = self.model.conf.max_len
+        prefixlen = tgt.size(-1)
         eos = self.tokenizer[self.tokenizer.EOS]
         log_prob = torch.zeros(1, device=self.device)
         for _ in range(maxlen - tgt.size(-1)):
@@ -55,7 +57,7 @@ class Base:
                 break
             log_prob += next_log_probs[next_token].log()
             tgt = torch.concat((tgt, next_token), dim=-1)
-        return self.tokenizer.decode(tgt[1:].tolist()), log_prob.exp().item()
+        return self.tokenizer.decode(tgt[prefixlen:].tolist()), log_prob.exp().item()
 
     @torch.no_grad()
     def _beam_search(self, tgt: torch.Tensor, **kwds: torch.Tensor):
@@ -64,6 +66,7 @@ class Base:
         if tgt.dim() != 2:
             raise RuntimeError("tgt must be batched!")
         maxlen = self.model.conf.max_len
+        prefixlen = tgt.size(-1)
         eos = self.tokenizer[self.tokenizer.EOS]
         token_size = self.model.conf.token_size
         beam_width = tgt.size(0)
@@ -88,36 +91,36 @@ class Base:
         for line in tgt:
             idx = (line == eos).nonzero(as_tuple=True)[0]
             if idx.numel() > 0:
-                smiles.append(self.tokenizer.decode(line[1:idx[0]].tolist()))
+                smiles.append(self.tokenizer.decode(line[prefixlen:idx[0]].tolist()))
             else:
-                smiles.append(self.tokenizer.decode(line[1:].tolist()))
+                smiles.append(self.tokenizer.decode(line[prefixlen:].tolist()))
         return smiles, probs
 
 
 class AdaMR(Base):
 
-    def _model_args(self, s1: str, s2: typing.Optional[str] = None) -> typing.Tuple[torch.Tensor]:
-        src = self._tokenize(s1)
-        if s2 is None:
-            tgt = self._tokenize(self.tokenizer.BOS)
-            return src, tgt
-        tgt = self._tokenize(f"{self.tokenizer.BOS}{s2}")
+    def _model_args(self, smiles: str) -> typing.Tuple[torch.Tensor]:
+        src = self._tokenize(smiles)
+        tgt = self._tokenize(self.tokenizer.BOS)
         return src, tgt
 
     # gentype: greedy, beam
-    def __call__(self, smiles: str, gentype: str = 'greedy') -> typing.Mapping:
+    def __call__(self, smiles: str = "") -> typing.Mapping:
         src, tgt = self._model_args(smiles)
-        m = getattr(self, f"_call_{gentype}")
-        smi, prob = m(src, tgt)
+        if len(smiles) > 0:
+            meth = self._do_canonicalize
+        else:
+            meth = self._do_generate
+        smi, prob = meth(src, tgt)
         return {
             'smiles': smi,
             'probability': prob
         }
 
-    def _call_greedy(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
-        return self._greedy_search(src=src, tgt=tgt)
+    def _do_generate(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
+        return self._random_sample(src=src, tgt=tgt)
 
-    def _call_beam(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
+    def _do_canonicalize(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
         beam_k = 3
         src = src.unsqueeze(0).repeat(beam_k, 1)
         tgt = tgt.unsqueeze(0).repeat(beam_k, 1)
@@ -127,7 +130,9 @@ class AdaMR(Base):
 
 class AdaMRClassifier(AdaMR):
     def _model_args(self, smiles: str) -> typing.Tuple[torch.Tensor]:
-        return super()._model_args(smiles, f"{smiles}{self.tokenizer.EOS}")
+        src = self._tokenize(smiles)
+        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        return src, tgt
 
     def __call__(self, smiles: str) -> typing.Mapping:
         args = self._model_args(smiles)
@@ -141,7 +146,9 @@ class AdaMRClassifier(AdaMR):
 
 class AdaMRRegression(AdaMR):
     def _model_args(self, smiles: str) -> typing.Tuple[torch.Tensor]:
-        return super()._model_args(smiles, f"{smiles}{self.tokenizer.EOS}")
+        src = self._tokenize(smiles)
+        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        return src, tgt
 
     def __call__(self, smiles: str) -> typing.Mapping:
         args = self._model_args(smiles)
@@ -180,6 +187,87 @@ class AdaMRGoalGeneration(AdaMR):
         smis, probs = [], []
         for _ in range(k):
             smi, prob = self._random_sample(goal=goal, src=src, tgt=tgt)
+            smis.append(smi)
+            probs.append(prob)
+        return {
+            'smiles': smis,
+            'probabilities': probs
+        }
+
+
+class AdaMR2(Base):
+
+    # gentype: greedy, beam
+    def __call__(self, smiles: str = "") -> typing.Mapping:
+        tgt = self._tokenize(f"{smiles}{self.tokenizer.BOS}")
+        if len(smiles) > 0:
+            meth = self._do_canonicalize
+        else:
+            meth = self._do_generate
+
+        smi, prob = meth(tgt)
+        return {
+            'smiles': smi,
+            'probability': prob
+        }
+
+    def _do_generate(self, tgt: torch.Tensor) -> typing.Mapping:
+        return self._random_sample(tgt=tgt)
+
+    def _do_canonicalize(self, tgt: torch.Tensor) -> typing.Mapping:
+        beam_k = 3
+        tgt = tgt.unsqueeze(0).repeat(beam_k, 1)
+        smiles, probs = self._beam_search(tgt=tgt)
+        return smiles[0], probs[0]
+
+
+class AdaMR2Classifier(AdaMR):
+
+    def __call__(self, smiles: str) -> typing.Mapping:
+        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        out = self.model(tgt)
+        prob, label = out.softmax(-1).max(-1)
+        return {
+            'label': label.item(),
+            'probability': prob.item()
+        }
+
+
+class AdaMR2Regression(AdaMR):
+
+    def __call__(self, smiles: str) -> typing.Mapping:
+        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        out = self.model(tgt)
+        return {
+            'value': out.item()
+        }
+
+
+class AdaMR2DistGeneration(AdaMR):
+
+    def __call__(self, k: int = 1) -> typing.Mapping:
+        assert k <= 10
+        tgt = self._tokenize(f"{self.tokenizer.CLS}{self.tokenizer.BOS}")
+        smis, probs = [], []
+        for _ in range(k):
+            smi, prob = self._random_sample(tgt=tgt)
+            smis.append(smi)
+            probs.append(prob)
+        return {
+            'smiles': smis,
+            'probabilities': probs
+        }
+
+
+class AdaMR2GoalGeneration(AdaMR):
+
+    def __call__(self, goal: float, k: int = 1) -> typing.Mapping:
+        assert k <= 10
+        tgt = self._tokenize(f"{self.tokenizer.CLS}{self.tokenizer.BOS}")
+        goal = torch.tensor(goal, device=self.device)
+        smis, probs = [], []
+        for _ in range(k):
+            smi, prob = self._random_sample(goal=goal, tgt=tgt)
             smis.append(smi)
             probs.append(prob)
         return {

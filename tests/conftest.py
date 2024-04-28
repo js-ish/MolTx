@@ -1,7 +1,6 @@
 import os.path
 import pytest
 from moltx import tokenizers as tkz
-from moltx import nets, models
 
 
 @pytest.fixture
@@ -12,10 +11,3 @@ def datadir():
 @pytest.fixture
 def tokenizer():
     return tkz.MoltxTokenizer(token_size=16)
-
-
-@pytest.fixture
-def model_conf():
-    return nets.AbsPosEncoderDecoderConfig(
-        token_size=16, max_len=32, d_model=8, nhead=2,
-        num_encoder_layers=2, num_decoder_layers=2)
