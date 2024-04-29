@@ -50,7 +50,7 @@ class AdaMRClassifier(AdaMR):
 
 
 class AdaMRRegression(AdaMR):
-    def __call__(self, smiles: typing.Sequence[str], values: typing.Sequence[int]) -> typing.Tuple[torch.Tensor]:
+    def __call__(self, smiles: typing.Sequence[str], values: typing.Sequence[float]) -> typing.Tuple[torch.Tensor]:
         if len(smiles) != len(values):
             raise RuntimeError(
                 "the length of smiles and values must be the same!")
@@ -106,7 +106,7 @@ class AdaMR2Classifier(AdaMR2):
 
 
 class AdaMR2Regression(AdaMR2):
-    def __call__(self, smiles: typing.Sequence[str], values: typing.Sequence[int]) -> typing.Tuple[torch.Tensor]:
+    def __call__(self, smiles: typing.Sequence[str], values: typing.Sequence[float]) -> typing.Tuple[torch.Tensor]:
         if len(smiles) != len(values):
             raise RuntimeError(
                 "the length of smiles and values must be the same!")
