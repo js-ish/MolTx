@@ -1,4 +1,3 @@
-import typing
 import torch
 import torch.nn as nn
 from moltx import nets, tokenizers
@@ -72,7 +71,7 @@ class AdaMRClassifier(AdaMR):
             nn.Linear(d_hidden, num_classes, dtype=conf.dtype)
         )
 
-    def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
+    def load_ckpt(self, *ckpt_files: str) -> None:
         self.load_state_dict(torch.load(
             ckpt_files[0], map_location=torch.device('cpu')), strict=False)
 
@@ -162,7 +161,7 @@ class AdaMR2Classifier(AdaMR2):
             nn.Linear(d_hidden, num_classes, dtype=conf.dtype)
         )
 
-    def load_ckpt(self, ckpt_files: typing.Sequence[str]) -> None:
+    def load_ckpt(self, *ckpt_files: str) -> None:
         self.load_state_dict(torch.load(
             ckpt_files[0], map_location=torch.device('cpu')), strict=False)
 
