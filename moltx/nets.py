@@ -42,6 +42,7 @@ class AbsPosEncoderDecoder(nn.Module):
             conf.d_model, conf.nhead, conf.num_encoder_layers, conf.num_decoder_layers, dropout=conf.dropout, activation='gelu', batch_first=True, dtype=conf.dtype)
         self.token_output = nn.Linear(
             conf.d_model, conf.token_size, bias=False, dtype=conf.dtype)
+        self.token_output.weight = self.embedding.token_embedding.weight
 
     def load_ckpt(self, *ckpt_files: str) -> None:
         self.load_state_dict(torch.load(
@@ -89,6 +90,7 @@ class AbsPosEncoderCausal(nn.Module):
             layer, conf.num_layers, norm=nn.LayerNorm(conf.d_model))
         self.token_output = nn.Linear(
             conf.d_model, conf.token_size, bias=False, dtype=conf.dtype)
+        self.token_output.weight = self.embedding.token_embedding.weight
 
     def load_ckpt(self, *ckpt_files: str) -> None:
         self.load_state_dict(torch.load(
