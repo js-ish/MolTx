@@ -56,10 +56,11 @@ torch.save(model.state_dict(), '/path/to/adamr.ckpt')
 from moltx import datasets, tokenizers
 tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Prediction)
 
+seq_len = 256 # max token lens of smiles in datasets, if None, use max token lens in smiles
 ds = datasets.AdaMRClassifier(tokenizer=tk, device=torch.device('cpu'))
 smiles = ["c1cccc1c", "CC[N+](C)(C)Cc1ccccc1Br"]
 labels = [0, 1]
-src, tgt, out = ds(smiles, labels)
+src, tgt, out = ds(smiles, labels, seq_len)
 
 from moltx import nets, models
 pretrained_conf = models.AdaMR.CONFIG_LARGE # or models.AdaMR.CONFIG_BASE
@@ -80,7 +81,7 @@ torch.save(model.state_dict(), '/path/to/classifier.ckpt')
 ds = datasets.AdaMRRegression(tokenizer=tk, device=torch.device('cpu'))
 smiles = ["c1cccc1c", "CC[N+](C)(C)Cc1ccccc1Br"]
 values = [0.23, 0.12]
-src, tgt, out = ds(smiles, values)
+src, tgt, out = ds(smiles, values, seq_len)
 
 model = models.AdaMRRegression(conf=pretrained_conf)
 model.load_ckpt('/path/to/adamr.ckpt')
@@ -98,7 +99,7 @@ torch.save(model.state_dict(), '/path/to/regression.ckpt')
 tk = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Generation)
 ds = datasets.AdaMRDistGeneration(tokenizer=tk, device=torch.device('cpu'))
 smiles = ["c1cccc1c", "CC[N+](C)(C)Cc1ccccc1Br"]
-src, tgt, out = ds(smiles)
+src, tgt, out = ds(smiles, seq_len)
 
 model = models.AdaMRDistGeneration(conf=pretrained_conf)
 model.load_ckpt('/path/to/adamr.ckpt')
@@ -116,7 +117,7 @@ torch.save(model.state_dict(), '/path/to/distgen.ckpt')
 ds = datasets.AdaMRGoalGeneration(tokenizer=tk, device=torch.device('cpu'))
 smiles = ["c1cccc1c", "CC[N+](C)(C)Cc1ccccc1Br"]
 goals = [0.23, 0.12]
-src, tgt, out = ds(smiles, goals)
+src, tgt, out = ds(smiles, goals, seq_len)
 
 model = models.AdaMRGoalGeneration(conf=pretrained_conf)
 model.load_ckpt('/path/to/adamr.ckpt')

@@ -35,6 +35,12 @@ def test_AdaMRClassifier(tokenizer):
     assert tgt.shape == (2, 9)
     assert out.shape == (2, 1)
 
+    seq_len = 10
+    src, tgt, out = ds(smiles, labels, seq_len)
+    assert src.shape == (2, seq_len)
+    assert tgt.shape == (2, seq_len)
+    assert out.shape == (2, 1)
+
 def test_AdaMRRegression(tokenizer):
     ds = datasets.AdaMRRegression(tokenizer)
     smiles = ["CC[N+]CCBr", "Cc1ccc1"]
@@ -46,6 +52,12 @@ def test_AdaMRRegression(tokenizer):
     assert tgt.shape == (2, 9)
     assert out.shape == (2, 1)
 
+    seq_len = 10
+    src, tgt, out = ds(smiles, values, seq_len)
+    assert src.shape == (2, seq_len)
+    assert tgt.shape == (2, seq_len)
+    assert out.shape == (2, 1)
+
 
 def test_AdaMRDistGeneration(tokenizer):
     ds = datasets.AdaMRDistGeneration(tokenizer)
@@ -54,6 +66,12 @@ def test_AdaMRDistGeneration(tokenizer):
     assert src.shape == (2, 1)
     assert tgt.shape == (2, 7)
     assert out.shape == (2, 7)
+
+    seq_len = 8
+    src, tgt, out = ds(smiles, seq_len)
+    assert src.shape == (2, 1)
+    assert tgt.shape == (2, seq_len)
+    assert out.shape == (2, seq_len)
 
 
 def test_AdaMRGoalGeneration(tokenizer):
@@ -65,6 +83,13 @@ def test_AdaMRGoalGeneration(tokenizer):
     assert src.shape == (2, 1)
     assert tgt.shape == (2, 7)
     assert out.shape == (2, 7)
+
+    seq_len = 9
+    goal, src, tgt, out = ds(smiles, goals, seq_len)
+    assert goal.shape == (2, 1)
+    assert src.shape == (2, 1)
+    assert tgt.shape == (2, seq_len)
+    assert out.shape == (2, seq_len)
 
 def test_AdaMR2(tokenizer):
     ds = datasets.AdaMR2(tokenizer)
@@ -89,6 +114,11 @@ def test_AdaMR2Classifier(tokenizer):
     assert tgt.shape == (2, 9)
     assert out.shape == (2, 1)
 
+    seq_len = 10
+    tgt, out = ds(smiles, labels, seq_len)
+    assert tgt.shape == (2, seq_len)
+    assert out.shape == (2, 1)
+
 def test_AdaMR2Regression(tokenizer):
     ds = datasets.AdaMR2Regression(tokenizer)
     smiles = ["CC[N+]CCBr", "Cc1ccc1"]
@@ -97,6 +127,11 @@ def test_AdaMR2Regression(tokenizer):
         ds(smiles, values[:1])
     tgt, out = ds(smiles, values)
     assert tgt.shape == (2, 9)
+    assert out.shape == (2, 1)
+
+    seq_len = 10
+    tgt, out = ds(smiles, values, seq_len)
+    assert tgt.shape == (2, seq_len)
     assert out.shape == (2, 1)
 
 
@@ -108,6 +143,12 @@ def test_AdaMR2DistGeneration(tokenizer):
     assert out.shape == (2, 8)
     assert out[0, 0].item() == 0
     assert tgt[0, 2:].eq(out[0, 1:-1]).all()
+
+    seq_len = 9
+    tgt, out = ds(smiles, seq_len)
+    assert tgt.shape == (2, seq_len)
+    assert out.shape == (2, seq_len)
+    assert out[0, 0].item() == 0
 
 
 def test_AdaMR2GoalGeneration(tokenizer):
@@ -121,3 +162,10 @@ def test_AdaMR2GoalGeneration(tokenizer):
     assert out[0, 0].item() == 0
     assert tgt[0, 2:].eq(out[0, 1:-1]).all()
 
+
+    seq_len = 9
+    goal, tgt, out = ds(smiles, goals, seq_len)
+    assert goal.shape == (2, 1)
+    assert tgt.shape == (2, seq_len)
+    assert out.shape == (2, seq_len)
+    assert out[0, 0].item() == 0
