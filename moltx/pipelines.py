@@ -89,7 +89,7 @@ class Base:
                 end_tgt = tgt.index_select(0, tgt_idx.index_select(0, meet_end).squeeze(1))
                 smiles.extend(map(self.tokenizer.decode, end_tgt[:, prefixlen:].tolist()))
                 if beam_width == 0:
-                    return smiles, probs
+                    return sorted(zip(smiles, probs), key=lambda x: x[1], reverse=True)
             not_end = (next_tokens.squeeze(1).ne(eos).nonzero()).squeeze(1)
             log_probs = log_probs.index_select(0, not_end)
             next_tokens = next_tokens.index_select(0, not_end)
@@ -99,7 +99,7 @@ class Base:
                 kwds['src'] = kwds['src'].index_select(0, tgt_idx.index_select(0, not_end).squeeze(1))
         probs.extend(log_probs.squeeze(1).exp().tolist())
         smiles.extend(map(self.tokenizer.decode, tgt[:, prefixlen:].tolist()))
-        return smiles, probs
+        return sorted(zip(smiles, probs), key=lambda x: x[1], reverse=True)
 
 
 class AdaMR(Base):
@@ -126,8 +126,8 @@ class AdaMR(Base):
         return self._random_sample(src=src, tgt=tgt)
 
     def _do_canonicalize(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
-        smiles, probs = self._beam_search(src=src, tgt=tgt, beam_width=3)
-        return smiles[0], probs[0]
+        out = self._beam_search(src=src, tgt=tgt, beam_width=3)
+        return out[0]
 
 
 class AdaMRClassifier(AdaMR):
@@ -217,8 +217,8 @@ class AdaMR2(Base):
         return self._random_sample(tgt=tgt)
 
     def _do_canonicalize(self, tgt: torch.Tensor) -> typing.Mapping:
-        smiles, probs = self._beam_search(tgt=tgt)
-        return smiles[0], probs[0]
+        out = self._beam_search(tgt=tgt)
+        return out[0]
 
 
 class AdaMR2Classifier(AdaMR):
