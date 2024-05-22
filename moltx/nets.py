@@ -105,7 +105,7 @@ class AbsPosEncoderCausal(nn.Module):
         indices = (tgt > 0).sum(dim=-1, keepdim=True) - 1
         indices = indices.unsqueeze(-1).repeat(*
                                                [1 for _ in range(tgt.dim())], out.shape[-1])
-        return torch.gather(input=out, dim=-2, index=indices).squeeze()
+        return torch.gather(input=out, dim=-2, index=indices).squeeze(-2)
 
     def forward_generation(self, tgt: torch.Tensor) -> torch.Tensor:
         out = self.forward_(tgt)
