@@ -33,13 +33,13 @@ def test_AdaMRClassifier(tokenizer):
     src, tgt, out = ds(smiles, labels)
     assert src.shape == (2, 7)
     assert tgt.shape == (2, 9)
-    assert out.shape == (2, 1)
+    assert out.shape == (2,)
 
     seq_len = 10
     src, tgt, out = ds(smiles, labels, seq_len)
     assert src.shape == (2, seq_len)
     assert tgt.shape == (2, seq_len)
-    assert out.shape == (2, 1)
+    assert out.shape == (2,)
 
 def test_AdaMRRegression(tokenizer):
     ds = datasets.AdaMRRegression(tokenizer)
@@ -112,12 +112,12 @@ def test_AdaMR2Classifier(tokenizer):
         ds(smiles, labels[:1])
     tgt, out = ds(smiles, labels)
     assert tgt.shape == (2, 9)
-    assert out.shape == (2, 1)
+    assert out.shape == (2,)
 
     seq_len = 10
     tgt, out = ds(smiles, labels, seq_len)
     assert tgt.shape == (2, seq_len)
-    assert out.shape == (2, 1)
+    assert out.shape == (2,)
 
 def test_AdaMR2Regression(tokenizer):
     ds = datasets.AdaMR2Regression(tokenizer)

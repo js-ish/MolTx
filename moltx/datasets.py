@@ -45,7 +45,7 @@ class AdaMRClassifier(AdaMR):
         src = self._tokenize(smiles, seq_len)
         tgt = self._tokenize(
             [f"{self.tokenizer.BOS}{smi}{self.tokenizer.EOS}" for smi in smiles], seq_len)
-        out = torch.tensor(labels, device=self.device).unsqueeze(-1)
+        out = torch.tensor(labels, device=self.device)
         return src, tgt, out
 
 
@@ -101,7 +101,7 @@ class AdaMR2Classifier(AdaMR2):
                 "the length of smiles and labels must be the same!")
         tgt = self._tokenize(
             [f"{self.tokenizer.BOS}{smi}{self.tokenizer.EOS}" for smi in smiles], seq_len)
-        out = torch.tensor(labels, device=self.device).unsqueeze(-1)
+        out = torch.tensor(labels, device=self.device)
         return tgt, out
 
 
