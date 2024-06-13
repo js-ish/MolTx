@@ -15,13 +15,33 @@ def adamr2_conf():
         token_size=16, max_len=32, d_model=8, nhead=2,num_layers=2)
 
 
+def test__GenBase(tokenizer, adamr2_conf):
+    pipeline = pipelines._GenBase(tokenizer, models.AdaMR2(adamr2_conf))
+    tgt = pipeline._tokenize(tokenizer.BOS)
+    smi1, prob1 = pipeline._greedy_search(tgt)
+    assert isinstance(smi1, str) and isinstance(prob1, float)
+    smi2, prob2 = pipeline._greedy_search(tgt)
+    assert smi2 == smi1 and prob1 == prob2
+    tgt2 = pipeline._tokenize(f"{tokenizer.BOS}C=C")
+    smi2, prob2 = pipeline._greedy_search(tgt2)
+    assert smi2 != smi1 and prob1 != prob2
+
+    smi1, prob1 = pipeline._random_sample(tgt)
+    assert isinstance(smi1, str) and isinstance(prob1, float)
+    smi2, prob2 = pipeline._random_sample(tgt)
+    assert smi2 != smi1 and prob1 != prob2
+
+    out1 = pipeline._beam_search(tgt, beam_width=2)
+    assert isinstance(out1, list) and len(out1) == 2
+    assert out1[0][1] >= out1[1][1]
+    out2 = pipeline._beam_search(tgt, beam_width=2)
+    assert out2 == out1
+
+
 def test_AdaMR(tokenizer, adamr_conf):
     pipeline = pipelines.AdaMR(tokenizer, models.AdaMR(adamr_conf))
-    out = pipeline("CC[N+](C)(C)Br")
-    assert 'smiles' in out and 'probability' in out
-    assert isinstance(out['smiles'], str)
 
-    out = pipeline("")
+    out = pipeline()
     assert 'smiles' in out and 'probability' in out
     assert isinstance(out['smiles'], str)
 
@@ -65,11 +85,8 @@ def test_AdaMRGoalGeneration(tokenizer, adamr_conf):
 
 def test_AdaMR2(tokenizer, adamr2_conf):
     pipeline = pipelines.AdaMR2(tokenizer, models.AdaMR2(adamr2_conf))
-    out = pipeline("CC[N+](C)(C)Br")
-    assert 'smiles' in out and 'probability' in out
-    assert isinstance(out['smiles'], str)
 
-    out = pipeline("")
+    out = pipeline()
     assert 'smiles' in out and 'probability' in out
     assert isinstance(out['smiles'], str)
 
@@ -109,3 +126,8 @@ def test_AdaMR2GoalGeneration(tokenizer, adamr2_conf):
     assert isinstance(out['smiles'], list) and len(out['smiles']) == 2 and isinstance(out['smiles'][0], str)
     assert isinstance(out['probabilities'], list) and len(
         out['probabilities']) == 2
+
+
+def test_AdaMR2SuperGeneration(tokenizer, adamr2_conf):
+    # TODO
+    pass

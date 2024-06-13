@@ -4,7 +4,7 @@ import torch.nn as nn
 from moltx import tokenizers
 
 
-class Base:
+class _Base:
     def __init__(self, tokenizer: tokenizers.MoltxTokenizer, model: nn.Module, device: torch.device = torch.device('cpu')) -> None:
         self.tokenizer = tokenizer
         model = model.to(device)
@@ -26,6 +26,8 @@ class Base:
             out[i] = tk
         return out.to(self.device)
 
+
+class _GenBase(_Base):
     @torch.no_grad()
     def _greedy_search(self, tgt: torch.Tensor, **kwds: torch.Tensor) -> typing.Tuple[typing.Sequence[int], float]:
         maxlen = self.model.conf.max_len
@@ -102,7 +104,7 @@ class Base:
         return sorted(zip(smiles, probs), key=lambda x: x[1], reverse=True)
 
 
-class AdaMR(Base):
+class AdaMR(_GenBase):
 
     def _model_args(self, smiles: str) -> typing.Tuple[torch.Tensor]:
         src = self._tokenize(smiles)
@@ -110,24 +112,13 @@ class AdaMR(Base):
         return src, tgt
 
     # gentype: greedy, beam
-    def __call__(self, smiles: str = "") -> typing.Mapping:
-        src, tgt = self._model_args(smiles)
-        if len(smiles) > 0:
-            meth = self._do_canonicalize
-        else:
-            meth = self._do_generate
-        smi, prob = meth(src, tgt)
+    def __call__(self) -> typing.Mapping:
+        src, tgt = self._model_args("")
+        smi, prob = self._random_sample(src=src, tgt=tgt)
         return {
             'smiles': smi,
             'probability': prob
         }
-
-    def _do_generate(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
-        return self._random_sample(src=src, tgt=tgt)
-
-    def _do_canonicalize(self, src: torch.Tensor, tgt: torch.Tensor) -> typing.Mapping:
-        out = self._beam_search(src=src, tgt=tgt, beam_width=3)
-        return out[0]
 
 
 class AdaMRClassifier(AdaMR):
@@ -197,31 +188,19 @@ class AdaMRGoalGeneration(AdaMR):
         }
 
 
-class AdaMR2(Base):
+class AdaMR2(_GenBase):
 
     # gentype: greedy, beam
-    def __call__(self, smiles: str = "") -> typing.Mapping:
-        tgt = self._tokenize(f"{smiles}{self.tokenizer.BOS}")
-        if len(smiles) > 0:
-            meth = self._do_canonicalize
-        else:
-            meth = self._do_generate
-
-        smi, prob = meth(tgt)
+    def __call__(self) -> typing.Mapping:
+        tgt = self._tokenize(self.tokenizer.BOS)
+        smi, prob = self._random_sample(tgt=tgt)
         return {
             'smiles': smi,
             'probability': prob
         }
 
-    def _do_generate(self, tgt: torch.Tensor) -> typing.Mapping:
-        return self._random_sample(tgt=tgt)
 
-    def _do_canonicalize(self, tgt: torch.Tensor) -> typing.Mapping:
-        out = self._beam_search(tgt=tgt)
-        return out[0]
-
-
-class AdaMR2Classifier(AdaMR):
+class AdaMR2Classifier(AdaMR2):
 
     def __call__(self, smiles: str) -> typing.Mapping:
         tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
@@ -233,7 +212,7 @@ class AdaMR2Classifier(AdaMR):
         }
 
 
-class AdaMR2Regression(AdaMR):
+class AdaMR2Regression(AdaMR2):
 
     def __call__(self, smiles: str) -> typing.Mapping:
         tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
@@ -243,7 +222,7 @@ class AdaMR2Regression(AdaMR):
         }
 
 
-class AdaMR2DistGeneration(AdaMR):
+class AdaMR2DistGeneration(AdaMR2):
 
     def __call__(self, k: int = 1) -> typing.Mapping:
         assert k <= 10
@@ -259,7 +238,7 @@ class AdaMR2DistGeneration(AdaMR):
         }
 
 
-class AdaMR2GoalGeneration(AdaMR):
+class AdaMR2GoalGeneration(AdaMR2):
 
     def __call__(self, goal: float, k: int = 1) -> typing.Mapping:
         assert k <= 10
@@ -274,3 +253,9 @@ class AdaMR2GoalGeneration(AdaMR):
             'smiles': smis,
             'probabilities': probs
         }
+
+
+class AdaMR2SuperGeneration(AdaMR2):
+
+    # TODO
+    pass
