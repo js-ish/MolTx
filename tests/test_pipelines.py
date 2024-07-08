@@ -1,4 +1,5 @@
 import pytest
+from unittest import mock
 from moltx import pipelines, models, nets
 
 
@@ -128,6 +129,28 @@ def test_AdaMR2GoalGeneration(tokenizer, adamr2_conf):
         out['probabilities']) == 2
 
 
-def test_AdaMR2SuperGeneration(tokenizer, adamr2_conf):
-    # TODO
-    pass
+def test_AdaMR2SuperGeneration(tokenizer):
+    conf = nets.AbsPosEncoderCausalConfig(
+        token_size=16, max_len=64, d_model=8, nhead=2,num_layers=2)
+    pipeline = pipelines.AdaMR2SuperGeneration(
+        tokenizer, models.AdaMR2(conf))
+
+    out = pipeline('denovo_generation', n_samples_per_trial=2)
+    assert isinstance(out, list) and len(out) == 2
+
+    with mock.patch("moltx.pipelines.AdaMR2SuperGeneration._decode_safe") as mock_f:
+        mock_f.return_value = ["Cc1cnc5s1.C14CNC1.C35.O34", "c12cc3ccc1O.C=C[C@H]2N.C3C(=O)O"]
+        out = pipeline('linker_generation', side_chains=['N#CCC1CN(S(=O)(=O)C[*])C1', '[*]n3cc(c1ncnc2[nH]ccc12)cn3'], n_samples_per_trial=2)
+        assert isinstance(out, list) and len(out) == 2
+
+        out = pipeline('scaffold_morphing', side_chains='N#CCC1CN(S(=O)(=O)C[1*])C1.[2*]n3cc(c1ncnc2[nH]ccc12)cn3', n_samples_per_trial=2)
+        assert isinstance(out, list) and len(out) == 2
+
+        out = pipeline('motif_extension', motif='N#CCC1CN(S(=O)(=O)C[*])C1', n_samples_per_trial=2)
+        assert isinstance(out, list) and len(out) == 2
+
+        out = pipeline('super_structure', core='O=S4(=O)NC(C1CC2C=CC1C2)Nc3ccccc34', n_samples_per_trial=2)
+        assert isinstance(out, list) and len(out) == 2
+
+        out = pipeline('scaffold_decoration', scaffold='O=S4(=O)NC(C1CC2C=CC1C2)Nc3cc([*])c([*])cc34', n_samples_per_trial=2)
+        assert isinstance(out, list) and len(out) == 2
