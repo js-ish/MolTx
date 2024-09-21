@@ -4,27 +4,16 @@ from moltx import nets, tokenizers
 
 
 class AdaMRTokenizerConfig:
-    Pretrain = tokenizers.MoltxPretrainConfig(
-        token_size=512,
-        fmt='smiles',
-        spe=True,
-        spe_dropout=0.2,
-        spe_merges=240
-    )
-
-    Generation = tokenizers.MoltxPretrainConfig(
+    Atom = tokenizers.MoltxPretrainConfig(
         token_size=512,
         fmt='smiles',
         spe=False,
-        spe_dropout=1.0,
-        spe_merges=240
     )
 
-    Prediction = tokenizers.MoltxPretrainConfig(
+    Spe = tokenizers.MoltxPretrainConfig(
         token_size=512,
         fmt='smiles',
         spe=True,
-        spe_dropout=0.0,
         spe_merges=240
     )
 

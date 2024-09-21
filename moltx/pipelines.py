@@ -1,7 +1,7 @@
 import typing
 import torch
 import torch.nn as nn
-from moltx import tokenizers
+from moltx import tokenizers, models
 
 
 class _Base:
@@ -105,16 +105,18 @@ class _GenBase(_Base):
 
 
 class AdaMR(_GenBase):
+    def __init__(self, model: models.AdaMR, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Spe)
+        super().__init__(tokenizer, model, device)
 
     def _model_args(self, smiles: str) -> typing.Tuple[torch.Tensor]:
         src = self._tokenize(smiles)
         tgt = self._tokenize(self.tokenizer.BOS)
         return src, tgt
 
-    # gentype: greedy, beam
-    def __call__(self) -> typing.Mapping:
-        src, tgt = self._model_args("")
-        smi, prob = self._random_sample(src=src, tgt=tgt)
+    def __call__(self, smiles: str = "") -> typing.Mapping:
+        src, tgt = self._model_args(smiles)
+        smi, prob = self._beam_search(src=src, tgt=tgt, beam_width=3)[0]
         return {
             'smiles': smi,
             'probability': prob
@@ -124,7 +126,7 @@ class AdaMR(_GenBase):
 class AdaMRClassifier(AdaMR):
     def _model_args(self, smiles: str) -> typing.Tuple[torch.Tensor]:
         src = self._tokenize(smiles)
-        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        tgt = self._tokenize(self.tokenizer.CLS)
         return src, tgt
 
     def __call__(self, smiles: str) -> typing.Mapping:
@@ -140,7 +142,7 @@ class AdaMRClassifier(AdaMR):
 class AdaMRRegression(AdaMR):
     def _model_args(self, smiles: str) -> typing.Tuple[torch.Tensor]:
         src = self._tokenize(smiles)
-        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        tgt = self._tokenize(self.tokenizer.CLS)
         return src, tgt
 
     def __call__(self, smiles: str) -> typing.Mapping:
@@ -189,11 +191,13 @@ class AdaMRGoalGeneration(AdaMR):
 
 
 class AdaMR2(_GenBase):
+    def __init__(self, model: models.AdaMR2, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Spe)
+        super().__init__(tokenizer, model, device)
 
-    # gentype: greedy, beam
-    def __call__(self) -> typing.Mapping:
-        tgt = self._tokenize(self.tokenizer.BOS)
-        smi, prob = self._random_sample(tgt=tgt)
+    def __call__(self, smiles: str = "") -> typing.Mapping:
+        tgt = self._tokenize(f"{smiles}{self.tokenizer.BOS}")
+        smi, prob = self._beam_search(tgt=tgt, beam_width=3)[0]
         return {
             'smiles': smi,
             'probability': prob
@@ -203,7 +207,7 @@ class AdaMR2(_GenBase):
 class AdaMR2Classifier(AdaMR2):
 
     def __call__(self, smiles: str) -> typing.Mapping:
-        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        tgt = self._tokenize(f"{smiles}{self.tokenizer.CLS}")
         out = self.model(tgt)
         prob, label = out.softmax(-1).max(-1)
         return {
@@ -215,7 +219,7 @@ class AdaMR2Classifier(AdaMR2):
 class AdaMR2Regression(AdaMR2):
 
     def __call__(self, smiles: str) -> typing.Mapping:
-        tgt = self._tokenize(f"{self.tokenizer.BOS}{smiles}{self.tokenizer.EOS}")
+        tgt = self._tokenize(f"{smiles}{self.tokenizer.CLS}")
         out = self.model(tgt)
         return {
             'value': out.item()
@@ -253,9 +257,3 @@ class AdaMR2GoalGeneration(AdaMR2):
             'smiles': smis,
             'probabilities': probs
         }
-
-
-class AdaMR2SuperGeneration(AdaMR2):
-
-    # TODO
-    pass

@@ -1,6 +1,6 @@
 import typing
 import torch
-from moltx import tokenizers
+from moltx import tokenizers, models
 
 
 class Base:
@@ -8,8 +8,8 @@ class Base:
         self.tokenizer = tokenizer
         self.device = device
 
-    def _tokenize(self, smiles: typing.Sequence[str], seq_len: int = None) -> torch.Tensor:
-        tks_list = [self.tokenizer(smi) for smi in smiles]
+    def _tokenize(self, smiles: typing.Sequence[str], seq_len: int = None, spe_dropout: float = 0) -> torch.Tensor:
+        tks_list = [self.tokenizer(smi, spe_dropout) for smi in smiles]
         size = seq_len or max(map(len, tks_list))
         out = [self._tokens2tensor(tks, size).unsqueeze(0) for tks in tks_list]
         return torch.concat(out)
@@ -24,17 +24,20 @@ class Base:
 
 
 class AdaMR(Base):
-    def __call__(self, s1: typing.Sequence[str], s2: typing.Sequence[str], seq_len: int = None) -> typing.Tuple[torch.Tensor]:
+    def __init__(self, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Spe)
+        super().__init__(tokenizer=tokenizer, device=device)
+
+    def __call__(self, s1: typing.Sequence[str], s2: typing.Sequence[str]) -> typing.Tuple[torch.Tensor]:
         if len(s1) != len(s2):
             raise RuntimeError("the length of s1 and s2 must be the same!")
-        bos = self.tokenizer[self.tokenizer.BOS]
-        eos = self.tokenizer[self.tokenizer.EOS]
-        src = self._tokenize(s1)
-        s2tokens = [self.tokenizer(smi) for smi in s2]
-        size = seq_len or max(map(len, s2tokens)) + 1
-        tgt = [self._tokens2tensor([bos] + tks, size).unsqueeze(0) for tks in s2tokens]
-        out = [self._tokens2tensor(tks + [eos], size).unsqueeze(0) for tks in s2tokens]
-        return src, torch.concat(tgt), torch.concat(out)
+        src = self._tokenize(s1, spe_dropout=0.2)
+        ts2 = self._tokenize(s2, spe_dropout=1.0)
+        bos = self._tokenize([self.tokenizer.BOS for _ in range(len(s2))])
+        eos = self._tokenize([self.tokenizer.EOS for _ in range(len(s2))])
+        tgt = torch.concat([bos, ts2], dim=1)
+        out = torch.concat([ts2, eos], dim=1)
+        return src, tgt, out
 
 
 class AdaMRClassifier(AdaMR):
@@ -42,9 +45,9 @@ class AdaMRClassifier(AdaMR):
         if len(smiles) != len(labels):
             raise RuntimeError(
                 "the length of smiles and labels must be the same!")
+        head = [self.tokenizer.CLS for _ in range(len(smiles))]
         src = self._tokenize(smiles, seq_len)
-        tgt = self._tokenize(
-            [f"{self.tokenizer.BOS}{smi}{self.tokenizer.EOS}" for smi in smiles], seq_len)
+        tgt = self._tokenize(head)
         out = torch.tensor(labels, device=self.device)
         return src, tgt, out
 
@@ -54,43 +57,64 @@ class AdaMRRegression(AdaMR):
         if len(smiles) != len(values):
             raise RuntimeError(
                 "the length of smiles and values must be the same!")
+        head = [self.tokenizer.CLS for _ in range(len(smiles))]
         src = self._tokenize(smiles, seq_len)
-        tgt = self._tokenize(
-            [f"{self.tokenizer.BOS}{smi}{self.tokenizer.EOS}" for smi in smiles], seq_len)
+        tgt = self._tokenize(head)
         out = torch.tensor(values, device=self.device).unsqueeze(-1)
         return src, tgt, out
 
 
 class AdaMRDistGeneration(AdaMR):
+    def __init__(self, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Atom)
+        super(AdaMR, self).__init__(tokenizer=tokenizer, device=device)
+
     def __call__(self, smiles: typing.Sequence[str], seq_len: int = None) -> typing.Tuple[torch.Tensor]:
-        head = [self.tokenizer.CLS for _ in range(len(smiles))]
-        return super().__call__(head, smiles, seq_len)
+        seq_len = seq_len and seq_len - 1
+        src = self._tokenize([self.tokenizer.CLS for _ in range(len(smiles))])
+        smi = self._tokenize(smiles, seq_len=seq_len)
+        bos = self._tokenize([self.tokenizer.BOS for _ in range(len(smiles))])
+        eos = self._tokenize([self.tokenizer.EOS for _ in range(len(smiles))])
+        tgt = torch.concat([bos, smi], dim=1)
+        out = torch.concat([smi, eos], dim=1)
+        return src, tgt, out
 
 
 class AdaMRGoalGeneration(AdaMR):
+    def __init__(self, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Atom)
+        super(AdaMR, self).__init__(tokenizer=tokenizer, device=device)
+
     def __call__(self, smiles: typing.Sequence[str], goals: typing.Sequence[float], seq_len: int = None) -> typing.Tuple[torch.Tensor]:
         if len(smiles) != len(goals):
             raise RuntimeError(
                 "the length of smiles and goals must be the same!")
-        head = [self.tokenizer.CLS for _ in range(len(smiles))]
-        src, tgt, out = super().__call__(head, smiles, seq_len)
+        seq_len = seq_len and seq_len - 1
+        src = self._tokenize([self.tokenizer.CLS for _ in range(len(smiles))])
+        smi = self._tokenize(smiles, seq_len=seq_len)
+        bos = self._tokenize([self.tokenizer.BOS for _ in range(len(smiles))])
+        eos = self._tokenize([self.tokenizer.EOS for _ in range(len(smiles))])
+        tgt = torch.concat([bos, smi], dim=1)
+        out = torch.concat([smi, eos], dim=1)
         goal = torch.tensor(goals, device=self.device).unsqueeze(-1)
         return goal, src, tgt, out
 
 
 class AdaMR2(Base):
-    def __call__(self, s1: typing.Sequence[str], s2: typing.Sequence[str], seq_len: int = None) -> typing.Tuple[torch.Tensor]:
+    def __init__(self, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Spe)
+        super().__init__(tokenizer=tokenizer, device=device)
+
+    def __call__(self, s1: typing.Sequence[str], s2: typing.Sequence[str]) -> typing.Tuple[torch.Tensor]:
         if len(s1) != len(s2):
             raise RuntimeError("the length of s1 and s2 must be the same!")
-        bos = self.tokenizer[self.tokenizer.BOS]
-        eos = self.tokenizer[self.tokenizer.EOS]
-        s1tokens = [self.tokenizer(smi) for smi in s1]
-        s2tokens = [self.tokenizer(smi) for smi in s2]
-        tgt_tokens = [tks1 + [bos] + tks2 for tks1, tks2 in zip(s1tokens, s2tokens)]
-        out_tokens = [[0] * len(tks1) + tks2 + [eos] for tks1, tks2 in zip(s1tokens, s2tokens)]
-        size = seq_len or max(map(len, out_tokens))
-        tgt = torch.concat([self._tokens2tensor(tks, size).unsqueeze(0) for tks in tgt_tokens])
-        out = torch.concat([self._tokens2tensor(tks, size).unsqueeze(0) for tks in out_tokens])
+        ts1 = self._tokenize(s1, spe_dropout=0.2)
+        ts2 = self._tokenize(s2, spe_dropout=1.0)
+        zero = torch.zeros_like(ts1)
+        bos = self._tokenize([self.tokenizer.BOS for _ in range(len(s2))])
+        eos = self._tokenize([self.tokenizer.EOS for _ in range(len(s2))])
+        tgt = torch.concat([ts1, bos, ts2], dim=1)
+        out = torch.concat([zero, ts2, eos], dim=1)
         return tgt, out
 
 
@@ -100,7 +124,7 @@ class AdaMR2Classifier(AdaMR2):
             raise RuntimeError(
                 "the length of smiles and labels must be the same!")
         tgt = self._tokenize(
-            [f"{self.tokenizer.BOS}{smi}{self.tokenizer.EOS}" for smi in smiles], seq_len)
+            [f"{smi}{self.tokenizer.CLS}" for smi in smiles], seq_len)
         out = torch.tensor(labels, device=self.device)
         return tgt, out
 
@@ -111,23 +135,44 @@ class AdaMR2Regression(AdaMR2):
             raise RuntimeError(
                 "the length of smiles and values must be the same!")
         tgt = self._tokenize(
-            [f"{self.tokenizer.BOS}{smi}{self.tokenizer.EOS}" for smi in smiles], seq_len)
+            [f"{smi}{self.tokenizer.CLS}" for smi in smiles], seq_len)
         out = torch.tensor(values, device=self.device).unsqueeze(-1)
         return tgt, out
 
 
 class AdaMR2DistGeneration(AdaMR2):
+    def __init__(self, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Atom)
+        super(AdaMR2, self).__init__(tokenizer=tokenizer, device=device)
+
     def __call__(self, smiles: typing.Sequence[str], seq_len: int = None) -> typing.Tuple[torch.Tensor]:
-        head = [self.tokenizer.CLS for _ in range(len(smiles))]
-        return super().__call__(head, smiles, seq_len)
+        seq_len = seq_len and seq_len - 2
+        head = self._tokenize([self.tokenizer.CLS for _ in range(len(smiles))])
+        zero = torch.zeros_like(head)
+        smi = self._tokenize(smiles, seq_len=seq_len)
+        bos = self._tokenize([self.tokenizer.BOS for _ in range(len(smiles))])
+        eos = self._tokenize([self.tokenizer.EOS for _ in range(len(smiles))])
+        tgt = torch.concat([head, bos, smi], dim=1)
+        out = torch.concat([zero, smi, eos], dim=1)
+        return tgt, out
 
 
 class AdaMR2GoalGeneration(AdaMR2):
+    def __init__(self, device: torch.device = torch.device('cpu')) -> None:
+        tokenizer = tokenizers.MoltxTokenizer.from_pretrain(models.AdaMRTokenizerConfig.Atom)
+        super(AdaMR2, self).__init__(tokenizer=tokenizer, device=device)
+
     def __call__(self, smiles: typing.Sequence[str], goals: typing.Sequence[float], seq_len: int = None) -> typing.Tuple[torch.Tensor]:
         if len(smiles) != len(goals):
             raise RuntimeError(
                 "the length of smiles and goals must be the same!")
-        head = [self.tokenizer.CLS for _ in range(len(smiles))]
-        tgt, out = super().__call__(head, smiles, seq_len)
+        seq_len = seq_len and seq_len - 2
+        head = self._tokenize([self.tokenizer.CLS for _ in range(len(smiles))])
+        zero = torch.zeros_like(head)
+        smi = self._tokenize(smiles, seq_len=seq_len)
+        bos = self._tokenize([self.tokenizer.BOS for _ in range(len(smiles))])
+        eos = self._tokenize([self.tokenizer.EOS for _ in range(len(smiles))])
+        tgt = torch.concat([head, bos, smi], dim=1)
+        out = torch.concat([zero, smi, eos], dim=1)
         goal = torch.tensor(goals, device=self.device).unsqueeze(-1)
         return goal, tgt, out

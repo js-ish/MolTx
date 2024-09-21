@@ -44,9 +44,8 @@ class SmilesTokenizer:
     If `dropout` is set to 0, the segmentation is equivalent to the standard BPE; if `dropout` is set to 1, the segmentation splits words into distinct characters.
     """
 
-    def __init__(self, codes_path: typing.Optional[str] = None, dropout: float = 0.0, merges: int = -1, exclusive_tokens: typing.Optional[typing.Sequence[str]] = None) -> None:
+    def __init__(self, codes_path: typing.Optional[str] = None, merges: int = -1, exclusive_tokens: typing.Optional[typing.Sequence[str]] = None) -> None:
         self.smi_tkz = SmilesAtomwiseTokenizer(exclusive_tokens)
-        self.dropout = dropout
         self.bpe_codes = {}
         if codes_path is not None:
             with open(codes_path) as f:
@@ -58,15 +57,15 @@ class SmilesTokenizer:
             self.bpe_codes = dict([(code, i)
                                    for (i, code) in enumerate(bpe_codes)])
 
-    def __call__(self, smiles: str) -> typing.Sequence[str]:
+    def __call__(self, smiles: str, dropout: float = 0.0) -> typing.Sequence[str]:
         if len(smiles) == 1:
             return [smiles]
         tokens = self.smi_tkz(smiles)
-        if self.dropout >= 0.999999 or not self.bpe_codes:
+        if dropout >= 0.999999 or not self.bpe_codes:
             return tokens
         while len(tokens) > 1:
             pairs = [(self.bpe_codes[pair], i, pair) for (i, pair) in enumerate(zip(tokens, tokens[1:])) if (
-                not self.dropout or random.random() > self.dropout) and pair in self.bpe_codes]
+                not dropout or random.random() > dropout) and pair in self.bpe_codes]
             if not pairs:
                 break
             # get first merge operation in list of BPE codes
@@ -119,7 +118,6 @@ class MoltxPretrainConfig:
     fmt: str = 'smiles'
     data_dir: str = os.path.join(os.path.dirname(__file__), 'data')
     spe: bool = True
-    spe_dropout: float = 0.0
     spe_merges: int = -1
 
 
@@ -141,13 +139,12 @@ class MoltxTokenizer:
         }
         if conf.spe:
             kwargs['spe_codes_path'] = os.path.join(datadir, f'spe_{conf.fmt}.txt')
-            kwargs['spe_dropout'] = conf.spe_dropout
             kwargs['spe_merges'] = conf.spe_merges
         tkz = cls(**kwargs, freeze=True)
         tkz.load(os.path.join(datadir, f'tks_{conf.fmt}.json'))
         return tkz
 
-    def __init__(self, token_size: int, freeze: bool = False, spe_codes_path: typing.Optional[str] = None, spe_dropout: float = 0.0, spe_merges: int = -1) -> None:
+    def __init__(self, token_size: int, freeze: bool = False, spe_codes_path: typing.Optional[str] = None, spe_merges: int = -1) -> None:
         self._tokens = []
         self._token_idx = {}
         self._token_size = token_size
@@ -157,7 +154,6 @@ class MoltxTokenizer:
         if spe_codes_path is not None:
             spe_kwargs['codes_path'] = spe_codes_path
             spe_kwargs['merges'] = spe_merges
-            spe_kwargs['dropout'] = spe_dropout
         self._smi_tkz = SmilesTokenizer(**spe_kwargs)
 
     def _update_tokens(self, tokens: typing.Sequence[str]) -> None:
@@ -205,19 +201,19 @@ class MoltxTokenizer:
         with open(path, 'w') as f:
             f.write(self.dumps())
 
-    def smi2tokens(self, smiles: str) -> typing.Sequence[str]:
+    def smi2tokens(self, smiles: str, spe_dropout: float = 0.0) -> typing.Sequence[str]:
         tokens = []
         m = self.REGEX.search(smiles)
         pos = 0
         while m is not None:
             start, end = m.span()
             if start > pos:
-                tokens.extend(self._smi_tkz(smiles[pos:start]))
+                tokens.extend(self._smi_tkz(smiles[pos:start], dropout=spe_dropout))
             tokens.append(m[0])
             pos = end
             m = self.REGEX.search(smiles, pos=pos)
         if len(smiles) > pos:
-            tokens.extend(self._smi_tkz(smiles[pos:]))
+            tokens.extend(self._smi_tkz(smiles[pos:], dropout=spe_dropout))
         self._update_tokens(tokens)
         return tokens
 
@@ -225,9 +221,9 @@ class MoltxTokenizer:
         tokens = [self[idx] for idx in token_idxs]
         return ''.join(tokens)
 
-    def encode(self, smiles: str) -> typing.Sequence[int]:
-        tokens = self.smi2tokens(smiles)
+    def encode(self, smiles: str, spe_dropout: float = 0.0) -> typing.Sequence[int]:
+        tokens = self.smi2tokens(smiles, spe_dropout)
         return [self[t] for t in tokens]
 
-    def __call__(self, smiles: str) -> typing.Sequence[int]:
-        return self.encode(smiles)
+    def __call__(self, smiles: str, spe_dropout: float = 0.0) -> typing.Sequence[int]:
+        return self.encode(smiles, spe_dropout)
