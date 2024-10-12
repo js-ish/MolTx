@@ -50,14 +50,14 @@ class _GenBase(_Base):
         eos = self.tokenizer[self.tokenizer.EOS]
         log_prob = torch.zeros(1, device=self.device)
         for _ in range(maxlen - tgt.size(-1)):
-            next_log_probs = (self.model(tgt=tgt, **kwds)
-                              [-1] / temperature).softmax(-1)  # [token_size]
+            next_probs = (self.model(tgt=tgt, **kwds)
+                          [-1] / temperature).softmax(-1)  # [token_size]
             rand_num = torch.rand((), device=self.device)
-            next_token = (next_log_probs.cumsum(-1) <
+            next_token = (next_probs.cumsum(-1) <
                           rand_num).sum(-1, keepdims=True)  # [1]
             if next_token.item() == eos:
                 break
-            log_prob += next_log_probs[next_token].log()
+            log_prob += next_probs[next_token].log()
             tgt = torch.concat((tgt, next_token), dim=-1)
         return self.tokenizer.decode(tgt[prefixlen:].tolist()), log_prob.exp().item()
 
