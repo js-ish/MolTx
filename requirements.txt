@@ -1,2 +1,4 @@
+pandas==2.1.0
 rdkit~=2023.9.1
 torch~=2.1.0
+safe-mol
